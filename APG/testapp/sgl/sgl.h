@@ -9,6 +9,7 @@
 #define _SGL_H_
 
 #include <vector>
+#include <cfloat>
 
 //---------------------------------------------------------------------------
 // Data types
@@ -760,76 +761,61 @@ void sglEmissiveMaterial(
 void sglEnvironmentMap(const int width,
 					   const int height,
 					   float *texels);
-/**
-* SglContextManager is singleton holding all registered SglContext classes.
-* SglContexts are stored in vector and suitable operation for creation, delete and get
-* are provided.
-*/
-class SglContextManager {
-private:
-	std::vector<SglContext*> contexts;
-	~SglContextManager() {
-		for (int i = 0; i < contexts.size(); ++i) {
-			delete contexts[i];
-		}
-	}
-
-	SglContextManager() {};												// Private constructor
-	SglContextManager(const SglContextManager&) = delete;				// Prevent copy-construction
-	SglContextManager& operator= (const SglContextManager&) = delete;	// Prevent assignment
-	
-	/** 
-	* Returns SqlContext identified by id. If no such context
-	* exists, null pointer is returned.
-	* @param id Id by which the SglContext is defined.
-	* @return Returns pointer to SqlContext specified by id. Nullptr if no such context exists.
-	*/
-	SglContext* getSglContext(int id) {
-		if (id >= contexts.size())
-			return nullptr;
-		return contexts[id];
-	}
-
-	/**
-	* Creates new SqlContext and returns its identifier.
-	*/
-	int createSglContext(int width, int height) {
-		SglContext* c = new SglContext(width, height);
-		contexts.push_back(c);
-		return contexts.size() - 1;
-	}
-
-	/**
-	* Removes SqlContext and free its resources.
-	* @param id Identifier for SglContext.
-	* @return Returns true, if identifier is valid and context deleted.
-	*/
-	bool removeSglContext(int id) {
-		if (id >= contexts.size())
-			return false;
-
-		delete contexts[id];
-		contexts.erase(contexts.begin() + id);
-		return true;
-	}
-
-public:
-	static SglContextManager& getInstance() {
-		static SglContextManager instance;
-		return instance;
-	}
-	
-};
-
 
 class SglContext {
 private:
 	int width;
 	int height;
+	/**
+		Color buffer saves integers from 0 to 1.
+	*/
+	float *colorBuffer;
+	float *depthBuffer;
+	/**
+		Color to which is color buffer saved.
+	*/
+	float r, g, b, alpha;
 public:
-	SglContext(int width, int height) : width{ width }, height{ height } {};
+	SglContext(int width, int height) : width{ width }, height{ height } {
+		colorBuffer = new float[width*height*3];
+		depthBuffer = new float[width*height];
+	};
 	~SglContext() {
-		// TODO
+		delete[] colorBuffer;
+		delete[] depthBuffer;
+	}
+
+	float* getColorBuffer() {
+		return colorBuffer;
+	}
+
+	float* getDepthBuffer() {
+		return depthBuffer;
+	}
+
+	void setClearColor(float r, float g, float b, float alpha) {
+		this->alpha = alpha;
+		this->r = r;
+		this->g = g;
+		this->b = b;
+	}
+
+	void clearColor() {
+		for (int i = 0; i < width; i += 3) {
+			for (int j = 0; j < height; j += 3) {
+				*(colorBuffer + i*j + j) = r;
+				*(colorBuffer + i*j + j + 1) = g;
+				*(colorBuffer + i*j + j + 2) = b;
+			}
+		}
+	}
+
+	void clearDepth() {
+		for (int i = 0; i < width; ++i) {
+			for (int j = 0; j < height; ++j) {
+				*(depthBuffer + i*j + j) = FLT_MAX;
+			}
+		}
 	}
 };
 
