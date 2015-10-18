@@ -146,11 +146,47 @@ void sglBegin(sglEElementType mode) {}
 
 void sglEnd(void) {}
 
-void sglVertex4f(float x, float y, float z, float w) {}
+void sglVertex4f(float x, float y, float z, float w) 
+{
+	inputPoint4f *point = new inputPoint4f;
+	(*point).x = x;
+	(*point).y = y;
+	(*point).z = z;
+	(*point).z = w;
 
-void sglVertex3f(float x, float y, float z) {}
+	(*point).r = colorVertexR;
+	(*point).g = colorVertexG;
+	(*point).b = colorVertexB;
 
-void sglVertex2f(float x, float y) {}
+	queue4f.push(*point);
+}
+
+void sglVertex3f(float x, float y, float z) 
+{
+	inputPoint3f *point = new inputPoint3f;
+	(*point).x = x;
+	(*point).y = y;
+	(*point).z = z;
+
+	(*point).r = colorVertexR;
+	(*point).g = colorVertexG;
+	(*point).b = colorVertexB;
+
+	queue3f.push(*point);
+}
+
+void sglVertex2f(float x, float y) 
+{
+	inputPoint2f *point = new inputPoint2f;
+	(*point).x = x;
+	(*point).y = y;
+
+	(*point).r = colorVertexR;
+	(*point).g = colorVertexG;
+	(*point).b = colorVertexB;
+
+	queue2f.push(*point);
+}
 
 void sglCircle(float x, float y, float z, float radius) {}
 
