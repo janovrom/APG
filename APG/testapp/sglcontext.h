@@ -1,8 +1,25 @@
 #pragma once
 
 #include <cfloat>
-
+#include <queue>
 #define MIN_CONTEXTS 32
+
+
+
+struct inputPoint2f {
+	float x, y;
+	float r, g, b;
+};
+
+struct inputPoint3f {
+	float x, y, z;
+	float r, g, b;
+};
+
+struct inputPoint4f {
+	float x, y, z, w;
+	float r, g, b;
+};
 
 /**
 It provides information if sglBegin was called. It is set to false
@@ -15,6 +32,15 @@ int offsetX, offsetY, windowWidth, windowHeight;
 Do not do depth test as default.
 */
 bool testDepth = false;
+
+float pointSize = 0, colorVertexR = 0, colorVertexG = 0, colorVertexB = 0;
+
+bool depthEnabled = false;
+int drawingMethod = 0;
+
+std::queue<inputPoint2f> queue2f;
+std::queue<inputPoint3f> queue3f;
+std::queue<inputPoint4f> queue4f;
 
 class SglContext {
 private:
