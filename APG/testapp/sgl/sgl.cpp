@@ -129,16 +129,14 @@ void sglClear(unsigned what) {
 		return;
 	}
 
-	switch (what) {
-		case SGL_COLOR_BUFFER_BIT:
-			contexts[contexts.activeContext]->clearColor();
-			break;
-		case SGL_DEPTH_BUFFER_BIT:
-			contexts[contexts.activeContext]->clearDepth();
-			break;
-		default:
-			setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
-			break;
+	if ((what & SGL_COLOR_BUFFER_BIT) == SGL_COLOR_BUFFER_BIT) {
+		contexts[contexts.activeContext]->clearColor();
+	}
+	else if ((what & SGL_DEPTH_BUFFER_BIT) == SGL_DEPTH_BUFFER_BIT) {
+		contexts[contexts.activeContext]->clearDepth();
+	}
+	else {
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 	}
 }
 
@@ -211,9 +209,27 @@ void sglAreaMode(sglEAreaMode mode) {}
 
 void sglPointSize(float size) {}
 
-void sglEnable(sglEEnableFlags cap) {}
+void sglEnable(sglEEnableFlags cap) {
+	switch (cap)
+	{
+	case SGL_DEPTH_TEST:
+		testDepth = true;
+		break;
+	default:
+		break;
+	}
+}
 
-void sglDisable(sglEEnableFlags cap) {}
+void sglDisable(sglEEnableFlags cap) {
+	switch (cap)
+	{
+	case SGL_DEPTH_TEST:
+		testDepth = false;
+		break;
+	default:
+		break;
+	}
+}
 
 //---------------------------------------------------------------------------
 // RayTracing oriented functions

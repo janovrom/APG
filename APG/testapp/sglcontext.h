@@ -11,6 +11,10 @@ it is set to false).
 */
 bool hasBegun;
 int offsetX, offsetY, windowWidth, windowHeight;
+/**
+Do not do depth test as default.
+*/
+bool testDepth = false;
 
 class SglContext {
 private:
@@ -24,7 +28,7 @@ private:
 	/**
 	Color to which is color buffer saved.
 	*/
-	float r, g, b, alpha;
+	static float r, g, b, alpha;
 public:
 	SglContext(int width, int height) : width{ width }, height{ height } {
 		colorBuffer = new float[width*height * 3];
