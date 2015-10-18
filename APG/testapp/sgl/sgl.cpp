@@ -142,9 +142,19 @@ void sglClear(unsigned what) {
 	}
 }
 
-void sglBegin(sglEElementType mode) {}
+void sglBegin(sglEElementType mode) 
+{
+	if (hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
+	if (mode <= 0 || mode >= sglEElementType::SGL_LAST_ELEMENT_TYPE) { setErrCode(sglEErrorCode::SGL_INVALID_ENUM); return; }
+	hasBegun = true;
+	drawingMethod = mode;
+}
 
-void sglEnd(void) {}
+void sglEnd(void) 
+{
+	if (!hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
+	hasBegun = false;
+}
 
 void sglVertex4f(float x, float y, float z, float w) 
 {
@@ -245,9 +255,23 @@ void sglColor3f(float r, float g, float b) {}
 
 void sglAreaMode(sglEAreaMode mode) {}
 
-void sglPointSize(float size) {}
+void sglPointSize(float size) 
+{
+	pointSize = size;
+}
 
-void sglEnable(sglEEnableFlags cap) {}
+void sglEnable(sglEEnableFlags cap) 
+{
+	if (hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
+	switch (cap) {
+	case sglEEnableFlags::SGL_DEPTH_TEST:
+		depthEnabled = true;
+		break;
+	default:
+		setErrCode(sglEErrorCode::SGL_INVALID_ENUM);
+		break;
+	}
+}
 
 void sglDisable(sglEEnableFlags cap) {}
 

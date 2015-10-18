@@ -32,7 +32,7 @@ int offsetX, offsetY, windowWidth, windowHeight;
 float pointSize = 0, colorVertexR = 0, colorVertexG = 0, colorVertexB = 0;
 
 bool depthEnabled = false;
-int drawingMethod = 0;
+sglEElementType drawingMethod = sglEElementType::SGL_POINTS;
 
 std::queue<inputPoint2f> queue2f;
 std::queue<inputPoint3f> queue3f;
