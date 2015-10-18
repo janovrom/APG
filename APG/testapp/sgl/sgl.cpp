@@ -153,6 +153,49 @@ void sglBegin(sglEElementType mode)
 	drawingMethod = mode;
 }
 
+/*
+Transformations of points will be applied here in future, now it just returns input.
+*/
+inputPoint4f transformThePoint(inputPoint4f& point)
+{
+	return point;
+}
+
+void drawMeAPoint(inputPoint4f& point) 
+{
+	inputPoint4f transformed = transformThePoint(point);
+
+	int W, H, x, y;
+
+	SglContext *cont = contexts.contexts[contexts.activeContext];
+
+
+
+	W = cont->getWidth();
+	H = cont->getHeight();
+	x = (int)point.x;
+	y = (int)point.y;
+
+	float *colorBuffer = cont->getColorBuffer();
+	int offset;
+
+	int size = (int)((pointSize-1) / 2);
+
+	for (int i = x - size; i < x + size; i++)
+	{
+		for (int j = y - size; j < y + size; j++)
+		{
+			if (i >= 0 && i < W && j >= 0 && j < H)
+			{
+				offset = j*W * 3 + i;
+				*(colorBuffer + offset) = point.r;
+				*(colorBuffer + offset + 1) = point.g;
+				*(colorBuffer + offset + 2) = point.b;
+			}
+		}
+	}
+}
+
 void sglEnd(void) 
 {
 	if (!hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }

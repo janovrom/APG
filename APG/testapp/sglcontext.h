@@ -62,6 +62,14 @@ public:
 		return depthBuffer;
 	}
 
+	int getWidth() {
+		return width;
+	}
+
+	int getHeight() {
+		return height;
+	}
+
 	void setClearColor(float r, float g, float b, float alpha) {
 		this->alpha = alpha;
 		this->r = r;
@@ -69,6 +77,26 @@ public:
 		this->b = b;
 	}
 
+	void clearColor(float r, float g, float b) {
+		int w = width * 3;
+		for (int i = 0; i < height; i++) {
+			for (int j = 0; j < w; j += 3) {
+				*(colorBuffer + i*w + j) = r;
+				*(colorBuffer + i*w + j + 1) = g;
+				*(colorBuffer + i*w + j + 2) = b;
+			}
+		}
+	}
+
+	void clearDepth() {
+		for (int i = 0; i < width; ++i) {
+			for (int j = 0; j < height; ++j) {
+				*(depthBuffer + i*j + j) = FLT_MAX;
+			}
+		}
+	}
+
+	/*
 	void clearColor(float r, float g, float b) {
 		for (int i = 0; i < width; i += 3) {
 			for (int j = 0; j < height; j += 3) {
@@ -86,6 +114,7 @@ public:
 			}
 		}
 	}
+	*/
 };
 
 struct ContextWrapper {
