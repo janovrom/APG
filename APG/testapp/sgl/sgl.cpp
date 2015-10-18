@@ -135,7 +135,7 @@ void sglClear(unsigned what) {
 	}
 
 	if ((what & SGL_COLOR_BUFFER_BIT) == SGL_COLOR_BUFFER_BIT) {
-			contexts[contexts.activeContext]->clearColor(colorClearR, colorClearG, colorClearB, );
+			contexts[contexts.activeContext]->clearColor(colorClearR, colorClearG, colorClearB );
 	}
 	else if ((what & SGL_DEPTH_BUFFER_BIT) == SGL_DEPTH_BUFFER_BIT) {
 			contexts[contexts.activeContext]->clearDepth();
@@ -176,29 +176,32 @@ void sglVertex4f(float x, float y, float z, float w)
 
 void sglVertex3f(float x, float y, float z) 
 {
-	inputPoint3f *point = new inputPoint3f;
+	inputPoint4f *point = new inputPoint4f;
 	(*point).x = x;
 	(*point).y = y;
 	(*point).z = z;
+	(*point).z = 1;
 
 	(*point).r = colorVertexR;
 	(*point).g = colorVertexG;
 	(*point).b = colorVertexB;
 
-	queue3f.push(*point);
+	queue4f.push(*point);
 }
 
 void sglVertex2f(float x, float y) 
 {
-	inputPoint2f *point = new inputPoint2f;
+	inputPoint4f *point = new inputPoint4f;
 	(*point).x = x;
 	(*point).y = y;
+	(*point).z = 0;
+	(*point).z = 1;
 
 	(*point).r = colorVertexR;
 	(*point).g = colorVertexG;
 	(*point).b = colorVertexB;
 
-	queue2f.push(*point);
+	queue4f.push(*point);
 }
 
 void sglCircle(float x, float y, float z, float radius) {}
