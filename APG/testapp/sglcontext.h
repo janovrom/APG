@@ -33,7 +33,9 @@ Do not do depth test as default.
 */
 bool testDepth = false;
 
-float pointSize = 0, colorVertexR = 0, colorVertexG = 0, colorVertexB = 0;
+float pointSize = 0;
+float colorVertexR = 0, colorVertexG = 0, colorVertexB = 0;
+float colorClearR = 0, colorClearG = 0, colorClearB = 0;
 
 bool depthEnabled = false;
 sglEElementType drawingMethod = sglEElementType::SGL_POINTS;
@@ -80,7 +82,7 @@ public:
 		this->b = b;
 	}
 
-	void clearColor() {
+	void clearColor(float r, float g, float b) {
 		for (int i = 0; i < width; i += 3) {
 			for (int j = 0; j < height; j += 3) {
 				*(colorBuffer + i*j + j) = r;

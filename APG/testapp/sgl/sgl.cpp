@@ -118,9 +118,14 @@ float *sglGetColorBufferPointer(void) {
 
 void sglClearColor (float r, float g, float b, float alpha) {
 	if (contexts.empty() || hasBegun || contexts.activeContext == -1)
+	{
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
-	else
-		contexts[contexts.activeContext]->setClearColor(r, g, b, alpha);
+	}else{
+		colorClearR = r;
+		colorClearG = g;
+		colorClearB = b;
+	}
+		//contexts[contexts.activeContext]->setClearColor(r, g, b, alpha);
 }
 
 void sglClear(unsigned what) {
@@ -130,7 +135,7 @@ void sglClear(unsigned what) {
 	}
 
 	if ((what & SGL_COLOR_BUFFER_BIT) == SGL_COLOR_BUFFER_BIT) {
-			contexts[contexts.activeContext]->clearColor();
+			contexts[contexts.activeContext]->clearColor(colorClearR, colorClearG, colorClearB, );
 	}
 	else if ((what & SGL_DEPTH_BUFFER_BIT) == SGL_DEPTH_BUFFER_BIT) {
 			contexts[contexts.activeContext]->clearDepth();
@@ -249,18 +254,25 @@ void sglViewport(int x, int y, int width, int height) {
 // Attribute functions
 //---------------------------------------------------------------------------
 
-void sglColor3f(float r, float g, float b) {}
+void sglColor3f(float r, float g, float b) 
+{
+	colorVertexR = r;
+	colorVertexG = g;
+	colorVertexB = b;
+}
 
 void sglAreaMode(sglEAreaMode mode) {}
 
 void sglPointSize(float size) 
 {
+	if (size <= 0) { setErrCode(sglEErrorCode::SGL_INVALID_VALUE); return; }
+	if (!hasBegun || contexts.empty() ) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
 	pointSize = size;
 }
 
 void sglEnable(sglEEnableFlags cap) 
 {
-	if (hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
+	if (hasBegun || contexts.empty()) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
 	switch (cap) {
 	case sglEEnableFlags::SGL_DEPTH_TEST:
 		depthEnabled = true;
@@ -272,12 +284,14 @@ void sglEnable(sglEEnableFlags cap)
 }
 
 void sglDisable(sglEEnableFlags cap) {
+	if (hasBegun || contexts.empty()) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
 	switch (cap)
 	{
 	case SGL_DEPTH_TEST:
 		testDepth = false;
 		break;
 	default:
+		setErrCode(sglEErrorCode::SGL_INVALID_ENUM);
 		break;
 	}
 }
