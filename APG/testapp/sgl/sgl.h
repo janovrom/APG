@@ -8,9 +8,6 @@
 #ifndef _SGL_H_
 #define _SGL_H_
 
-#include <vector>
-#include <cfloat>
-
 //---------------------------------------------------------------------------
 // Data types
 //---------------------------------------------------------------------------
@@ -761,62 +758,5 @@ void sglEmissiveMaterial(
 void sglEnvironmentMap(const int width,
 					   const int height,
 					   float *texels);
-
-class SglContext {
-private:
-	int width;
-	int height;
-	/**
-		Color buffer saves integers from 0 to 1.
-	*/
-	float *colorBuffer;
-	float *depthBuffer;
-	/**
-		Color to which is color buffer saved.
-	*/
-	float r, g, b, alpha;
-public:
-	SglContext(int width, int height) : width{ width }, height{ height } {
-		colorBuffer = new float[width*height*3];
-		depthBuffer = new float[width*height];
-	};
-	~SglContext() {
-		delete[] colorBuffer;
-		delete[] depthBuffer;
-	}
-
-	float* getColorBuffer() {
-		return colorBuffer;
-	}
-
-	float* getDepthBuffer() {
-		return depthBuffer;
-	}
-
-	void setClearColor(float r, float g, float b, float alpha) {
-		this->alpha = alpha;
-		this->r = r;
-		this->g = g;
-		this->b = b;
-	}
-
-	void clearColor() {
-		for (int i = 0; i < width; i += 3) {
-			for (int j = 0; j < height; j += 3) {
-				*(colorBuffer + i*j + j) = r;
-				*(colorBuffer + i*j + j + 1) = g;
-				*(colorBuffer + i*j + j + 2) = b;
-			}
-		}
-	}
-
-	void clearDepth() {
-		for (int i = 0; i < width; ++i) {
-			for (int j = 0; j < height; ++j) {
-				*(depthBuffer + i*j + j) = FLT_MAX;
-			}
-		}
-	}
-};
 
 #endif /* of _SGL_H_ */

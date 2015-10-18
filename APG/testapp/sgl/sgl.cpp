@@ -6,16 +6,18 @@
 //---------------------------------------------------------------------------
 
 #include "sgl.h"
+#include "sglcontext.h"
 
-int activeContext = -1;
-std::vector<SglContext*> contexts;
-/**
-	It provides information if sglBegin was called. It is set to false
-	and after sglBegin call changed to true (likewise after sglEnd 
-	it is set to false).
-*/
-bool hasBegun;
-int offsetX, offsetY, windowWidth, windowHeight;
+void ContextWrapper::add(SglContext* c) {
+	int i = findFirstEmpty();
+	if (i == -1) {
+		setErrCode(sglEErrorCode::SGL_OUT_OF_RESOURCES);
+	}
+	else {
+		contexts[i] = c;
+		++count;
+	}
+}
 
 /// Current error code.
 static sglEErrorCode _libStatus = SGL_NO_ERROR;
@@ -71,11 +73,8 @@ void sglInit(void) {
 }
 
 void sglFinish(void) {
-	for (int i = 0; i < contexts.size(); ++i) {
-		delete contexts[i];
-	}
 	contexts.clear();
-	activeContext = -1;
+	contexts.activeContext = -1;
 	hasBegun = false;
 	offsetX = offsetY = windowWidth = windowHeight = 0;
 }
@@ -86,38 +85,31 @@ int sglCreateContext(int width, int height) {
 		setErrCode(sglEErrorCode::SGL_OUT_OF_MEMORY);
 		return -2;
 	}
-	//if (decided to restrict max count of contexts, min 32) {
-	//setErrCode(sglEErrorCode::SGL_OUT_OF_RESOURCES);
-	//return -1;
-	//}
-	contexts.push_back(c);
+	
+	contexts.add(c);
 	return contexts.size() - 1;
 }
 
 void sglDestroyContext(int id) {
-	if (id >= contexts.size())
-		return;
-
-	delete contexts[id];
-	contexts.erase(contexts.begin() + id);
+	contexts.clear(id);
 }
 
 void sglSetContext(int id) {
 	if (id < contexts.size())
-		activeContext = id;
+		contexts.activeContext = id;
 	else
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 }
 
 int sglGetContext(void) {
-	return activeContext;
+	return contexts.activeContext;
 }
 
 float *sglGetColorBufferPointer(void) {
-	if (activeContext == -1)
+	if (contexts.activeContext == -1)
 		return 0;
 
-	return contexts[activeContext]->getColorBuffer();
+	return contexts[contexts.activeContext]->getColorBuffer();
 }
 
 //---------------------------------------------------------------------------
@@ -125,24 +117,24 @@ float *sglGetColorBufferPointer(void) {
 //---------------------------------------------------------------------------
 
 void sglClearColor (float r, float g, float b, float alpha) {
-	if (contexts.empty() || hasBegun || activeContext == -1) 
+	if (contexts.empty() || hasBegun || contexts.activeContext == -1)
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 	else
-		contexts[activeContext]->setClearColor(r, g, b, alpha);
+		contexts[contexts.activeContext]->setClearColor(r, g, b, alpha);
 }
 
 void sglClear(unsigned what) {
-	if (contexts.empty() || hasBegun || activeContext == -1) {
+	if (contexts.empty() || hasBegun || contexts.activeContext == -1) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 		return;
 	}
 
 	switch (what) {
 		case SGL_COLOR_BUFFER_BIT:
-			contexts[activeContext]->clearColor();
+			contexts[contexts.activeContext]->clearColor();
 			break;
 		case SGL_DEPTH_BUFFER_BIT:
-			contexts[activeContext]->clearDepth();
+			contexts[contexts.activeContext]->clearDepth();
 			break;
 		default:
 			setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
@@ -198,7 +190,7 @@ void sglViewport(int x, int y, int width, int height) {
 	if (width < 0 || height < 0) {
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 	}
-	else if (hasBegun || activeContext == -1 || contexts.empty()) {
+	else if (hasBegun || contexts.activeContext == -1 || contexts.empty()) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 	}
 	else {
