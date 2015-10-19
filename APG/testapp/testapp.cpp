@@ -1526,7 +1526,6 @@ int main(int argc, char **argv)
   cout<<"TotalTime : "<<totalTime<<endl;
   CleanUp();
 #endif
-
   _CrtDumpMemoryLeaks();
   return 0;
 }

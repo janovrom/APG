@@ -72,6 +72,12 @@ int ContextWrapper::add(SglContext* c) {
 void sglInit(void) {
 	hasBegun = false;
 	offsetX = offsetY = windowWidth = windowHeight = 0;
+	float *mv = new float[16];
+	float *proj = new float[16];
+	copyMatrix(mv, identity);
+	copyMatrix(proj, identity);
+	modelViewStack.push(mv);
+	projectionStack.push(proj);
 }
 
 void sglFinish(void) {
@@ -79,6 +85,18 @@ void sglFinish(void) {
 	contextWrapper.activeContext = -1;
 	hasBegun = false;
 	offsetX = offsetY = windowWidth = windowHeight = 0;
+	for (;!modelViewStack.empty();) {
+		delete[] modelViewStack.top();
+		modelViewStack.pop();
+	}
+	for (; !projectionStack.empty();) {
+		delete[] projectionStack.top();
+		projectionStack.pop();
+	}
+	for (;!queue4f.empty();) {
+		delete &queue4f.front();
+		queue4f.pop();
+	}
 }
 
 int sglCreateContext(int width, int height) {
@@ -464,6 +482,7 @@ void sglVertex2f(float x, float y)
 	(*point).b = colorVertexB;
 
 	queue4f.push(*point);
+	delete point;
 }
 
 void sglCircle(float x, float y, float z, float radius) {}
