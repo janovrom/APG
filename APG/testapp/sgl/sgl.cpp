@@ -319,8 +319,8 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 	H = cont->getHeight();
 	float *colorBuffer = cont->getColorBuffer();
 
-	inputPoint4f *startT = &transformThePoint(start);
-	inputPoint4f *endT = &transformThePoint(end);
+	inputPoint4f *startT = transformThePoint(start);
+	inputPoint4f *endT = transformThePoint(end);
 
 	x0 = (*startT).x;
 	y0 = (*startT).y;
@@ -376,9 +376,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 		{
 			offset = y0*W * 3 + x0 * 3;
 
-			*(colorBuffer + offset) = (*startT).r;
-			*(colorBuffer + offset + 1) = (*startT).g;
-			*(colorBuffer + offset + 2) = (*startT).b;
+			*(colorBuffer + offset) = startT->r;
+			*(colorBuffer + offset + 1) = startT->g;
+			*(colorBuffer + offset + 2) = startT->b;
 		}
 
 		}
@@ -387,9 +387,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 		{
 			offset = x0*W * 3 + y0 * 3;
 
-			*(colorBuffer + offset) = (*startT).r;
-			*(colorBuffer + offset + 1) = (*startT).g;
-			*(colorBuffer + offset + 2) = (*startT).b;
+			*(colorBuffer + offset) = startT->r;
+			*(colorBuffer + offset + 1) = startT->g;
+			*(colorBuffer + offset + 2) = startT->b;
 		}
 	}
 
@@ -412,9 +412,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX * 3;
 
-				*(colorBuffer + offset) = (1-lerpValue)*(*startT).r + (lerpValue)*(*endT).r;
-				*(colorBuffer + offset + 1) = (1-lerpValue)*(*startT).g + (lerpValue)*(*endT).g;
-				*(colorBuffer + offset + 2) = (1-lerpValue)*(*startT).b + (lerpValue)*(*endT).b;
+				*(colorBuffer + offset) = (1-lerpValue)*startT->r + (lerpValue)*endT->r;
+				*(colorBuffer + offset + 1) = (1-lerpValue)*startT->g + (lerpValue)*endT->g;
+				*(colorBuffer + offset + 2) = (1-lerpValue)*startT->b + (lerpValue)*endT->b;
 			}
 
 		}else{
@@ -422,9 +422,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempX*W * 3 + tempY * 3;
 
-				*(colorBuffer + offset) = (1-lerpValue)*(*startT).r + (lerpValue)*(*endT).r;
-				*(colorBuffer + offset + 1) = (1-lerpValue)*(*startT).g + (lerpValue)*(*endT).g;
-				*(colorBuffer + offset + 2) = (1-lerpValue)*(*startT).b + (lerpValue)*(*endT).b;
+				*(colorBuffer + offset) = (1 - lerpValue)*startT->r + (lerpValue)*endT->r;
+				*(colorBuffer + offset + 1) = (1 - lerpValue)*startT->g + (lerpValue)*endT->g;
+				*(colorBuffer + offset + 2) = (1 - lerpValue)*startT->b + (lerpValue)*endT->b;
 			}
 		}
 	}

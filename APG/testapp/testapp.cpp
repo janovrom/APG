@@ -710,7 +710,7 @@ void DrawTestScene0B(void)
 	sglEnd();
   }
 
-  /**/
+  /*
   sglColor3f(1,1,1);
   sglPointSize(3);
   sglBegin(SGL_LINES);
