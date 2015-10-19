@@ -15,8 +15,8 @@
 //#define TEST5
 
 #ifdef TEST0
-#define TEST_0A
-//#define TEST_0B
+//#define TEST_0A
+#define TEST_0B
 #endif
 
 #ifdef TEST1
@@ -665,7 +665,7 @@ void DrawTestScene0A(void)
   for(int j=0; j < numCircles; j++, r+=radiusStep) {
     // point test
     sglColor3f(j/(float)numCircles,j/(float)numCircles,j/(float)numCircles);
-    sglPointSize(1);
+    sglPointSize(5);
     sglBegin(SGL_POINTS);
     {
       for(int i=0; i<numSegments; i++) {
@@ -704,6 +704,23 @@ void DrawTestScene0B(void)
 	sglVertex2f(centerX + r*cosf(angle), centerY + r*sinf(angle));
 	sglEnd();
   }
+
+  /*
+  sglColor3f(1,1,1);
+  sglPointSize(3);
+  sglBegin(SGL_LINES);
+  sglColor3f(1, 1, 0);
+  sglVertex2f(100.0f, 200.0f);
+  sglColor3f(0, 1, 1);
+  sglVertex2f(50.0f, 50.0f);
+  sglEnd();
+  sglBegin(SGL_POINTS);
+  sglColor3f(0, 0, 1);
+  sglVertex2f(100.0f, 200.0f);
+  sglColor3f(0, 1, 0);
+  sglVertex2f(50.0f, 50.0f);
+  sglEnd();
+  */
 }
 
 /// Drawing of all elements - orthographic tranformation only (scale+translation in 2d)
@@ -1177,7 +1194,7 @@ int main(int argc, char **argv)
   cout << "test 0a..." << flush;
   timer.Restart();
   sglSetContext(_contexts[0]);
-  sglClearColor(0.5, 0, 0, 1);
+  sglClearColor(0, 0, 0, 1);
   sglClear(SGL_COLOR_BUFFER_BIT);
   DrawTestScene0A();
   cout << "done in " << timer.UserTime() << " sec." << endl;
@@ -1185,7 +1202,7 @@ int main(int argc, char **argv)
 #endif
 
 #ifdef TEST_0B
-  cout << "test 0a..." << flush;
+  cout << "test 0b..." << flush;
   timer.Restart();
   sglSetContext(_contexts[1]);
   sglClearColor(0, 0, 0, 1);
