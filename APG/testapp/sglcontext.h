@@ -2,12 +2,41 @@
 
 #include <cfloat>
 #include <queue>
+#include <stack>
 #define MIN_CONTEXTS 32
 
+#define _CRTDBG_MAP_ALLOC
+#define _CRTDBG_MAPALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#ifdef _DEBUG
+#define DEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
+#define new DEBUG_NEW
+#endif
+
+std::stack<float *> modelViewStack;
+std::stack<float *> projectionStack;
+
+void multiplyMatrix(float* left, const float* right);
+/**
+	Compute dot product of line and column of left and right matrix.
+*/
+float dotVectors(const float* left, const float* right, int i, int j);
+/**
+	Compute dot product of line of left matrix and vector.
+*/
+float dotVectors(const float* left, inputPoint4f& vector, int i);
+void multiplyMatrixVector(const float* matrix, inputPoint4f& vector, inputPoint4f& output);
+void copyMatrix(float* output, const float* input);
+
+float identity[16] ={	1.0, 0.0, 0.0, 0.0,
+						0.0, 1.0, 0.0, 0.0, 
+						0.0, 0.0, 1.0, 0.0, 
+						0.0, 0.0, 0.0, 1.0};
 
 struct inputPoint4f {
 	float x, y, z, w;
-	float r, g, b;
+	float r, g, b, a;
 };
 
 /**
@@ -94,6 +123,10 @@ public:
 	SglContext* contexts[MIN_CONTEXTS];
 	int length = MIN_CONTEXTS;
 	int count = 0;
+
+	~ContextWrapper() {
+		clear();
+	}
 
 	SglContext* operator[] (int id) {
 		if (id < length)

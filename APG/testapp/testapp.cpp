@@ -81,8 +81,13 @@
 Test leaks.
 */
 #define _CRTDBG_MAP_ALLOC
+#define _CRTDBG_MAPALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
+#ifdef _DEBUG
+#define DEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
+#define new DEBUG_NEW
+#endif
 
 using namespace std;
 
@@ -1144,7 +1149,8 @@ void myKeyboard (unsigned char key, int x, int y)
 
 int main(int argc, char **argv) 
 {
-
+	_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG);
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #if USE_GUI
 	// Initialize GLUT
   glutInit(&argc, argv);
@@ -1503,6 +1509,7 @@ int main(int argc, char **argv)
   cout<<"TotalTime : "<<totalTime<<endl;
   CleanUp();
 #endif
+
   _CrtDumpMemoryLeaks();
   return 0;
 }
