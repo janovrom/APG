@@ -191,7 +191,7 @@ inputPoint4f* transformThePoint(inputPoint4f& point)
 		break;
 	default:
 		break;
-	}
+}
 	return ret;
 }
 
@@ -202,22 +202,21 @@ void drawMeAPoint(inputPoint4f& point)
 	int W, H, x, y;
 
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
-
-
-
 	W = cont->getWidth();
 	H = cont->getHeight();
 	x = (int)transformed->x;
 	y = (int)transformed->y;
 
 	float *colorBuffer = cont->getColorBuffer();
+
 	int offset;
 
 	int size = (int)((pointSize-1) / 2);
+	int sizeCorrection = 1 - (int) pointSize % 2;
 
-	for (int i = x - size; i <= x + size; i++)
+	for (int i = x - size; i <= x + (size + sizeCorrection); i++)
 	{
-		for (int j = y - size; j <= y + size; j++)
+		for (int j = y - size; j <= y + (size + sizeCorrection); j++)
 		{
 			if (i >= 0 && i < W && j >= 0 && j < H)
 			{
@@ -232,8 +231,106 @@ void drawMeAPoint(inputPoint4f& point)
 	delete transformed;
 }
 
+void setPixel(int x, int y)
+{
+
+}
+
 void drawMeALine(inputPoint4f& start, inputPoint4f& end)
 {
+	int W, H, tempX, tempY, offset;
+
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
+	W = cont->getWidth();
+	H = cont->getHeight();
+	float *colorBuffer = cont->getColorBuffer();
+
+	inputPoint4f startT = transformThePoint(start);
+	inputPoint4f endT = transformThePoint(end);
+
+	/*if (startT.x > endT.x)
+	{
+		inputPoint4f swapT = startT;
+		startT = endT;
+		endT = swapT;
+	}*/
+
+	int x0, x1, y0, y1;
+	float k;
+
+	x0 = startT.x;
+	y0 = startT.y;
+	x1 = endT.x;
+	y1 = endT.y;
+
+
+	int endValue;
+	float lerpValue;
+	if (std::abs((float)(y1 - y0) / (x1 - x0)) < 1){
+		//x sampling
+		if (x0 > x1)
+		{
+			int swap;
+			swap = x0;
+			x0 = x1;
+			x1 = swap;
+
+			swap = y0;
+			y0 = y1;
+			y1 = swap;
+		}
+		k = (float)(y1 - y0) / (x1 - x0);
+		endValue = x1 - x0;
+		for (int i = 0; i <= endValue; i++){
+			//setPixel(x0 + i, y0 + i*k);
+			lerpValue = (float)i / endValue;
+			tempX = x0 + i;
+			tempY = y0 + i*k;
+
+			if (tempX >= 0 && tempX < W && tempY >= 0 && tempY < H)
+			{
+				offset = tempY*W * 3 + tempX*3;
+
+				*(colorBuffer + offset) = (lerpValue)*startT.r + (1-lerpValue)*endT.r;
+				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
+				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
+			}
+		}
+	}else {
+		//y sampling
+		if (y0 > y1)
+		{
+			int swap;
+			swap = x0;
+			x0 = x1;
+			x1 = swap;
+
+			swap = y0;
+			y0 = y1;
+			y1 = swap;
+		}
+		k = (float)(x1 - x0) / (y1 - y0);
+		endValue = y1 - y0;
+		for (int i = 0; i <= endValue; i++) {
+			//setPixel(x0 + i*k, y0 + i);
+			lerpValue = (float)i / endValue;
+			tempX = x0 + i*k;
+			tempY = y0 + i;
+
+			if (tempX >= 0 && tempX < W && tempY >= 0 && tempY < H)
+			{
+				offset = tempY*W * 3 + tempX * 3;
+
+				*(colorBuffer + offset) = (lerpValue)*startT.r + (1 - lerpValue)*endT.r;
+				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
+				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
+			}
+		}
+
+	}
+
+
+
 	//printf("IMPLEMENT ME: sgl.cpp -> drawMeALine \n");
 }
 
@@ -323,6 +420,15 @@ void sglEnd(void)
 	case sglEElementType::SGL_POINTS:
 		drawPoints();
 		break;
+	case sglEElementType::SGL_LINES:
+		drawLines();
+		break;
+	case sglEElementType::SGL_LINE_STRIP:
+		drawLineStrip();
+		break;
+	case sglEElementType::SGL_LINE_LOOP:
+		drawLineLoop();
+		break;
 	default:
 		break;
 	}
@@ -337,7 +443,7 @@ void sglVertex4f(float x, float y, float z, float w)
 	(*point).x = x;
 	(*point).y = y;
 	(*point).z = z;
-	(*point).z = w;
+	(*point).w = w;
 
 	(*point).r = colorVertexR;
 	(*point).g = colorVertexG;
@@ -352,7 +458,7 @@ void sglVertex3f(float x, float y, float z)
 	(*point).x = x;
 	(*point).y = y;
 	(*point).z = z;
-	(*point).z = 1;
+	(*point).w = 1;
 
 	(*point).r = colorVertexR;
 	(*point).g = colorVertexG;
@@ -367,7 +473,7 @@ void sglVertex2f(float x, float y)
 	(*point).x = x;
 	(*point).y = y;
 	(*point).z = 0;
-	(*point).z = 1;
+	(*point).w = 1;
 
 	(*point).r = colorVertexR;
 	(*point).g = colorVertexG;

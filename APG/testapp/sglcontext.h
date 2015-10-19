@@ -52,7 +52,7 @@ Do not do depth test as default.
 bool testDepth = false;
 sglEMatrixMode matrixMode = SGL_MODELVIEW;
 
-float pointSize = 0;
+short pointSize = 0;
 float colorVertexR = 0, colorVertexG = 0, colorVertexB = 0;
 float colorClearR = 0, colorClearG = 0, colorClearB = 0;
 
