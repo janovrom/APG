@@ -21,6 +21,7 @@ int offsetX, offsetY, windowWidth, windowHeight;
 Do not do depth test as default.
 */
 bool testDepth = false;
+sglEMatrixMode matrixMode = SGL_MODELVIEW;
 
 float pointSize = 0;
 float colorVertexR = 0, colorVertexG = 0, colorVertexB = 0;
@@ -40,10 +41,6 @@ private:
 	*/
 	float *colorBuffer;
 	float *depthBuffer;
-	/**
-	Color to which is color buffer saved.
-	*/
-	static float r, g, b, alpha;
 public:
 	SglContext(int width, int height) : width{ width }, height{ height } {
 		colorBuffer = new float[width*height * 3];
@@ -70,13 +67,6 @@ public:
 		return height;
 	}
 
-	void setClearColor(float r, float g, float b, float alpha) {
-		this->alpha = alpha;
-		this->r = r;
-		this->g = g;
-		this->b = b;
-	}
-
 	void clearColor(float r, float g, float b) {
 		int w = width * 3;
 		for (int i = 0; i < height; i++) {
@@ -96,42 +86,24 @@ public:
 		}
 	}
 
-	/*
-	void clearColor(float r, float g, float b) {
-		for (int i = 0; i < width; i += 3) {
-			for (int j = 0; j < height; j += 3) {
-				*(colorBuffer + i*j + j) = r;
-				*(colorBuffer + i*j + j + 1) = g;
-				*(colorBuffer + i*j + j + 2) = b;
-			}
-		}
-	}
-
-	void clearDepth() {
-		for (int i = 0; i < width; ++i) {
-			for (int j = 0; j < height; ++j) {
-				*(depthBuffer + i*j + j) = FLT_MAX;
-			}
-		}
-	}
-	*/
 };
 
 struct ContextWrapper {
+public:
 	int activeContext = -1;
 	SglContext* contexts[MIN_CONTEXTS];
-	int size = MIN_CONTEXTS;
+	int length = MIN_CONTEXTS;
 	int count = 0;
 
 	SglContext* operator[] (int id) {
-		if (id < size)
+		if (id < length)
 			return contexts[id];
 		else
 			return nullptr;
 	}
 
 	void clear() {
-		for (int i = 0; i < size; ++i) {
+		for (int i = 0; i < length; ++i) {
 			delete contexts[i];
 			contexts[i] = nullptr;
 		}
@@ -139,7 +111,7 @@ struct ContextWrapper {
 	}
 
 	void clear(int id) {
-		if (id < size) {
+		if (id < length) {
 			delete contexts[id];
 			--count;
 		}
@@ -150,17 +122,16 @@ struct ContextWrapper {
 	}
 
 	int size() {
-		return size;
+		return length;
 	}
 
-	void add(SglContext* c);
-private:
-	ContextWrapper();
+	int add(SglContext* c);
+
 	int findFirstEmpty() {
-		for (int i = 0; i < size; ++i) {
+		for (int i = 0; i < length; ++i) {
 			if (contexts[i] == nullptr)
 				return i;
 		}
 		return -1;
 	}
-} contexts;
+} contextWrapper;

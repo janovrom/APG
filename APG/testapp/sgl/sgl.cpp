@@ -8,17 +8,6 @@
 #include "sgl.h"
 #include "sglcontext.h"
 
-void ContextWrapper::add(SglContext* c) {
-	int i = findFirstEmpty();
-	if (i == -1) {
-		setErrCode(sglEErrorCode::SGL_OUT_OF_RESOURCES);
-	}
-	else {
-		contexts[i] = c;
-		++count;
-	}
-}
-
 /// Current error code.
 static sglEErrorCode _libStatus = SGL_NO_ERROR;
 
@@ -67,14 +56,27 @@ const char* sglGetErrorString(sglEErrorCode error)
 // Initialization functions
 //---------------------------------------------------------------------------
 
+int ContextWrapper::add(SglContext* c) {
+	int i = findFirstEmpty();
+	if (i == -1) {
+		setErrCode(sglEErrorCode::SGL_OUT_OF_RESOURCES);
+		return -1;
+	}
+	else {
+		contexts[i] = c;
+		++count;
+		return i;
+	}
+}
+
 void sglInit(void) {
 	hasBegun = false;
 	offsetX = offsetY = windowWidth = windowHeight = 0;
 }
 
 void sglFinish(void) {
-	contexts.clear();
-	contexts.activeContext = -1;
+	contextWrapper.clear();
+	contextWrapper.activeContext = -1;
 	hasBegun = false;
 	offsetX = offsetY = windowWidth = windowHeight = 0;
 }
@@ -86,30 +88,30 @@ int sglCreateContext(int width, int height) {
 		return -2;
 	}
 	
-	contexts.add(c);
-	return contexts.size() - 1;
+	
+	return contextWrapper.add(c);
 }
 
 void sglDestroyContext(int id) {
-	contexts.clear(id);
+	contextWrapper.clear(id);
 }
 
 void sglSetContext(int id) {
-	if (id < contexts.size())
-		contexts.activeContext = id;
+	if (id < contextWrapper.size())
+		contextWrapper.activeContext = id;
 	else
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 }
 
 int sglGetContext(void) {
-	return contexts.activeContext;
+	return contextWrapper.activeContext;
 }
 
 float *sglGetColorBufferPointer(void) {
-	if (contexts.activeContext == -1)
+	if (contextWrapper.activeContext == -1)
 		return 0;
 
-	return contexts[contexts.activeContext]->getColorBuffer();
+	return contextWrapper[contextWrapper.activeContext]->getColorBuffer();
 }
 
 //---------------------------------------------------------------------------
@@ -117,28 +119,27 @@ float *sglGetColorBufferPointer(void) {
 //---------------------------------------------------------------------------
 
 void sglClearColor (float r, float g, float b, float alpha) {
-	if (contexts.empty() || hasBegun || contexts.activeContext == -1)
-	{
+	if (contextWrapper.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
-	}else{
+	}
+	else {
 		colorClearR = r;
 		colorClearG = g;
 		colorClearB = b;
 	}
-		//contexts[contexts.activeContext]->setClearColor(r, g, b, alpha);
 }
 
 void sglClear(unsigned what) {
-	if (contexts.empty() || hasBegun || contexts.activeContext == -1) {
+	if (contextWrapper.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 		return;
 	}
 
 	if ((what & SGL_COLOR_BUFFER_BIT) == SGL_COLOR_BUFFER_BIT) {
-			contexts[contexts.activeContext]->clearColor(colorClearR, colorClearG, colorClearB );
+			contextWrapper[contextWrapper.activeContext]->clearColor(colorClearR, colorClearG, colorClearB );
 	}
 	else if ((what & SGL_DEPTH_BUFFER_BIT) == SGL_DEPTH_BUFFER_BIT) {
-			contexts[contexts.activeContext]->clearDepth();
+			contextWrapper[contextWrapper.activeContext]->clearDepth();
 	}
 	else {
 			setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
@@ -168,7 +169,7 @@ void drawMeAPoint(inputPoint4f& point)
 
 	int W, H, x, y;
 
-	SglContext *cont = contexts.contexts[contexts.activeContext];
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 
 
 
@@ -182,9 +183,9 @@ void drawMeAPoint(inputPoint4f& point)
 
 	int size = (int)((pointSize-1) / 2);
 
-	for (int i = x - size; i < x + size; i++)
+	for (int i = x - size; i <= x + size; i++)
 	{
-		for (int j = y - size; j < y + size; j++)
+		for (int j = y - size; j <= y + size; j++)
 		{
 			if (i >= 0 && i < W && j >= 0 && j < H)
 			{
@@ -360,7 +361,17 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {}
 // Transform functions
 //---------------------------------------------------------------------------
 
-void sglMatrixMode( sglEMatrixMode mode ) {}
+void sglMatrixMode( sglEMatrixMode mode ) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+	if (mode != SGL_MODELVIEW || mode != SGL_PROJECTION) {
+		setErrCode(SGL_INVALID_ENUM);
+		return;
+	}
+	matrixMode = mode;
+}
 
 void sglPushMatrix(void) {}
 
@@ -388,7 +399,7 @@ void sglViewport(int x, int y, int width, int height) {
 	if (width < 0 || height < 0) {
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 	}
-	else if (hasBegun || contexts.activeContext == -1 || contexts.empty()) {
+	else if (hasBegun || contextWrapper.empty()) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 	}
 	else {
@@ -415,16 +426,19 @@ void sglAreaMode(sglEAreaMode mode) {}
 void sglPointSize(float size) 
 {
 	if (size <= 0) { setErrCode(sglEErrorCode::SGL_INVALID_VALUE); return; }
-	if (!hasBegun || contexts.empty() ) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
+	if (hasBegun || contextWrapper.empty() ) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
 	pointSize = size;
 }
 
-void sglEnable(sglEEnableFlags cap) 
-{
-	if (hasBegun || contexts.empty()) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
-	switch (cap) {
-	case sglEEnableFlags::SGL_DEPTH_TEST:
-		depthEnabled = true;
+void sglEnable(sglEEnableFlags cap) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+	switch (cap)
+	{
+	case SGL_DEPTH_TEST:
+		testDepth = true;
 		break;
 	default:
 		setErrCode(sglEErrorCode::SGL_INVALID_ENUM);
@@ -433,7 +447,10 @@ void sglEnable(sglEEnableFlags cap)
 }
 
 void sglDisable(sglEEnableFlags cap) {
-	if (hasBegun || contexts.empty()) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
 	switch (cap)
 	{
 	case SGL_DEPTH_TEST:
