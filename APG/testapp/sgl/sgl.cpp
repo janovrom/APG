@@ -117,14 +117,14 @@ float *sglGetColorBufferPointer(void) {
 //---------------------------------------------------------------------------
 
 void sglClearColor (float r, float g, float b, float alpha) {
-	if (contexts.empty() || hasBegun || contexts.activeContext == -1)
+	if (contexts.empty() || hasBegun)
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 	else
 		contexts[contexts.activeContext]->setClearColor(r, g, b, alpha);
 }
 
 void sglClear(unsigned what) {
-	if (contexts.empty() || hasBegun || contexts.activeContext == -1) {
+	if (contexts.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 		return;
 	}
@@ -196,7 +196,17 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {}
 // Transform functions
 //---------------------------------------------------------------------------
 
-void sglMatrixMode( sglEMatrixMode mode ) {}
+void sglMatrixMode( sglEMatrixMode mode ) {
+	if (hasBegun || contexts.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+	if (mode != SGL_MODELVIEW || mode != SGL_PROJECTION) {
+		setErrCode(SGL_INVALID_ENUM);
+		return;
+	}
+	matrixMode = mode;
+}
 
 void sglPushMatrix(void) {}
 
@@ -224,7 +234,7 @@ void sglViewport(int x, int y, int width, int height) {
 	if (width < 0 || height < 0) {
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 	}
-	else if (hasBegun || contexts.activeContext == -1 || contexts.empty()) {
+	else if (hasBegun || contexts.empty()) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 	}
 	else {
@@ -246,23 +256,33 @@ void sglAreaMode(sglEAreaMode mode) {}
 void sglPointSize(float size) {}
 
 void sglEnable(sglEEnableFlags cap) {
+	if (hasBegun || contexts.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
 	switch (cap)
 	{
 	case SGL_DEPTH_TEST:
 		testDepth = true;
 		break;
 	default:
+		setErrCode(SGL_INVALID_ENUM);
 		break;
 	}
 }
 
 void sglDisable(sglEEnableFlags cap) {
+	if (hasBegun || contexts.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
 	switch (cap)
 	{
 	case SGL_DEPTH_TEST:
 		testDepth = false;
 		break;
 	default:
+		setErrCode(SGL_INVALID_ENUM);
 		break;
 	}
 }

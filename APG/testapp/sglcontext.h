@@ -32,6 +32,7 @@ int offsetX, offsetY, windowWidth, windowHeight;
 Do not do depth test as default.
 */
 bool testDepth = false;
+sglEMatrixMode matrixMode = SGL_MODELVIEW;
 
 float pointSize = 0, colorVertexR = 0, colorVertexG = 0, colorVertexB = 0;
 
