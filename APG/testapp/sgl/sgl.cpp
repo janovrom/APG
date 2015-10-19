@@ -157,23 +157,39 @@ void sglBegin(sglEElementType mode)
 /*
 Transformations of points will be applied here in future, now it just returns input.
 */
-inputPoint4f transformThePoint(inputPoint4f& point)
+inputPoint4f* transformThePoint(inputPoint4f& point)
 {
 	//printf("IMPLEMENT ME: sgl.cpp -> transformThePoint \n");
-	return point;
+	inputPoint4f *ret = new inputPoint4f;
+	ret->r = point.r;
+	ret->g = point.g;
+	ret->b = point.b;
+	ret->a = point.a;
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		multiplyMatrixVector(modelViewStack.top(), point, *ret);
+		break;
+	case SGL_PROJECTION:
+		multiplyMatrixVector(projectionStack.top(), point, *ret);
+		break;
+	default:
+		break;
+}
+	return ret;
 }
 
 void drawMeAPoint(inputPoint4f& point) 
 {
-	inputPoint4f transformed = transformThePoint(point);
+	inputPoint4f* transformed = transformThePoint(point);
 
 	int W, H, x, y;
 
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = (int)point.x;
-	y = (int)point.y;
+	x = (int)transformed->x;
+	y = (int)transformed->y;
+
 	float *colorBuffer = cont->getColorBuffer();
 
 	int offset;
@@ -187,15 +203,15 @@ void drawMeAPoint(inputPoint4f& point)
 		{
 			if (i >= 0 && i < W && j >= 0 && j < H)
 			{
-				offset = j*W * 3 + i*3;
-				
-				*(colorBuffer + offset) = point.r;
-				*(colorBuffer + offset + 1) = point.g;
-				*(colorBuffer + offset + 2) = point.b;
-				
+				offset = j*W * 3 + i;
+				*(colorBuffer + offset) = transformed->r;
+				*(colorBuffer + offset + 1) = transformed->g;
+				*(colorBuffer + offset + 2) = transformed->b;
 			}
 		}
 	}
+
+	delete transformed;
 }
 
 void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
@@ -207,8 +223,8 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 	H = cont->getHeight();
 	float *colorBuffer = cont->getColorBuffer();
 
-	inputPoint4f startT = transformThePoint(start);
-	inputPoint4f endT = transformThePoint(end);
+	inputPoint4f *startT = transformThePoint(start);
+	inputPoint4f *endT = transformThePoint(end);
 
 	/*if (startT.x > endT.x)
 	{
@@ -220,10 +236,10 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 	int x0, x1, y0, y1;
 	float k;
 
-	x0 = startT.x;
-	y0 = startT.y;
-	x1 = endT.x;
-	y1 = endT.y;
+	x0 = startT->x;
+	y0 = startT->y;
+	x1 = endT->x;
+	y1 = endT->y;
 
 
 	int endValue;
@@ -253,9 +269,9 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX*3;
 
-				*(colorBuffer + offset) = (lerpValue)*startT.r + (1-lerpValue)*endT.r;
-				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
-				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
+				*(colorBuffer + offset) = (lerpValue)*startT->r + (1-lerpValue)*endT->r;
+				*(colorBuffer + offset + 1) = (lerpValue)*startT->g + (1 - lerpValue)*endT->g;
+				*(colorBuffer + offset + 2) = (lerpValue)*startT->b + (1 - lerpValue)*endT->b;
 			}
 		}
 	}else {
@@ -283,9 +299,9 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX * 3;
 
-				*(colorBuffer + offset) = (lerpValue)*startT.r + (1 - lerpValue)*endT.r;
-				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
-				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
+				*(colorBuffer + offset) = (lerpValue)*startT->r + (1 - lerpValue)*endT->r;
+				*(colorBuffer + offset + 1) = (lerpValue)*startT->g + (1 - lerpValue)*endT->g;
+				*(colorBuffer + offset + 2) = (lerpValue)*startT->b + (1 - lerpValue)*endT->b;
 			}
 		}
 	}
@@ -365,7 +381,7 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 			*(colorBuffer + offset + 2) = (*startT).b;
 		}
 
-	}
+		}
 	else {
 		if (y0 >= 0 && y0 < W && x0 >= 0 && x0 < H)
 		{
@@ -595,27 +611,279 @@ void sglMatrixMode( sglEMatrixMode mode ) {
 	matrixMode = mode;
 }
 
-void sglPushMatrix(void) {}
+float* duplicateMatrix(const float* matrix) {
+	float* ret = new float[16];
+	for (int i = 0; i < 16; ++i) {
+		ret[i] = matrix[i];
+	}
+	return ret;
+}
 
-void sglPopMatrix(void) {}
+void sglPushMatrix(void) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
 
-void sglLoadIdentity(void) {}
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		modelViewStack.push(duplicateMatrix(modelViewStack.top()));
+		break;
+	case SGL_PROJECTION:
+		projectionStack.push(duplicateMatrix(projectionStack.top()));
+		break;
+	default:
+		break;
+	}
+}
 
-void sglLoadMatrix(const float *matrix) {}
+void sglPopMatrix(void) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
 
-void sglMultMatrix(const float *matrix) {}
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		if (modelViewStack.size() == 1) {
+			setErrCode(SGL_STACK_UNDERFLOW);
+		}
+		else {
+			delete[] modelViewStack.top();
+			modelViewStack.pop();
+		}
+		break;
+	case SGL_PROJECTION:
+		if (projectionStack.size() == 1) {
+			setErrCode(SGL_STACK_UNDERFLOW);
+		}
+		else {
+			delete[] projectionStack.top();
+			projectionStack.pop();
+		}
+		break;
+	default:
+		break;
+	}
+}
 
-void sglTranslate(float x, float y, float z) {}
+void sglLoadIdentity(void) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
 
-void sglScale(float scalex, float scaley, float scalez) {}
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		copyMatrix(modelViewStack.top(), identity);
+		break;
+	case SGL_PROJECTION:
+		copyMatrix(projectionStack.top(), identity);
+		break;
+	default:
+		break;
+	}
+}
 
-void sglRotate2D(float angle, float centerx, float centery) {}
+void sglLoadMatrix(const float *matrix) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
 
-void sglRotateY(float angle) {}
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		copyMatrix(modelViewStack.top(), matrix);
+		break;
+	case SGL_PROJECTION:
+		copyMatrix(projectionStack.top(), matrix);
+		break;
+	default:
+		break;
+	}
+}
 
-void sglOrtho(float left, float right, float bottom, float top, float near, float far) {}
+void sglMultMatrix(const float *matrix) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
 
-void sglFrustum(float left, float right, float bottom, float top, float near, float far) {}
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		multiplyMatrix(modelViewStack.top(), matrix);
+		break;
+	case SGL_PROJECTION:
+		multiplyMatrix(projectionStack.top(), matrix);
+		break;
+	default:
+		break;
+	}
+}
+
+void sglTranslate(float x, float y, float z) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+	float translate[16];
+	copyMatrix(translate, identity);
+	translate[12] = x;
+	translate[13] = y;
+	translate[14] = z;
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		multiplyMatrix(modelViewStack.top(), translate);
+		break;
+	case SGL_PROJECTION:
+		multiplyMatrix(projectionStack.top(), translate);
+		break;
+	default:
+		break;
+	}
+}
+
+void sglScale(float scalex, float scaley, float scalez) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+	float scale[16];
+	copyMatrix(scale, identity);
+	scale[0] = scalex;
+	scale[5] = scaley;
+	scale[10] = scalez;
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		multiplyMatrix(modelViewStack.top(), scale);
+		break;
+	case SGL_PROJECTION:
+		multiplyMatrix(projectionStack.top(), scale);
+		break;
+	default:
+		break;
+	}
+}
+
+void sglRotate2D(float angle, float centerx, float centery) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+
+	float tmp[16];
+	float rotate[16];
+	copyMatrix(tmp, identity);
+	copyMatrix(rotate, identity);
+	tmp[12] = centerx;
+	tmp[13] = centery;
+	rotate[0] = cos(angle); rotate[4] = -sin(angle);
+	rotate[1] = sin(angle); rotate[5] = cos(angle);
+
+	multiplyMatrix(rotate, tmp);
+
+	tmp[12] = -centerx;
+	tmp[13] = -centery;
+
+	multiplyMatrix(tmp, rotate);
+
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		multiplyMatrix(modelViewStack.top(), tmp);
+		break;
+	case SGL_PROJECTION:
+		multiplyMatrix(projectionStack.top(), tmp);
+		break;
+	default:
+		break;
+	}
+}
+
+void sglRotateY(float angle) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+
+	float rotate[16];
+	copyMatrix(rotate, identity);
+	rotate[0] = cos(angle); rotate[8] = -sin(angle);
+	rotate[2] = sin(angle); rotate[10] = cos(angle);
+
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		multiplyMatrix(modelViewStack.top(), rotate);
+		break;
+	case SGL_PROJECTION:
+		multiplyMatrix(projectionStack.top(), rotate);
+		break;
+	default:
+		break;
+	}
+}
+
+void sglOrtho(float left, float right, float bottom, float top, float near, float far) {
+	if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+
+	float ortho[16];
+	copyMatrix(ortho, identity);
+	ortho[0] = 2.0f / (right - left);
+	ortho[5] = 2.0f / (top - bottom);
+	ortho[10] = - 2.0f / (far - near);
+	ortho[12] = - (right + left) / (right - left);
+	ortho[13] = - (top + bottom) / (top - bottom);
+	ortho[14] = -(far + near) / (far - near);
+
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		multiplyMatrix(modelViewStack.top(), ortho);
+		break;
+	case SGL_PROJECTION:
+		multiplyMatrix(projectionStack.top(), ortho);
+		break;
+	default:
+		break;
+	}
+}
+
+void sglFrustum(float left, float right, float bottom, float top, float near, float far) {
+	if (near < 0 || far < 0) {
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+	}
+	else if (hasBegun || contextWrapper.empty()) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+	}
+
+	float A = (right + left) / (right - left);
+	float B = (top + bottom) / (top - bottom);
+	float C = (far + near) / (far - near);
+	float D = - 2.0f * far * near / (far - near);
+
+	float persp[16];
+	copyMatrix(persp, identity);
+	persp[0] = 2.0f * near/ (right - left);
+	persp[5] = 2.0f * near / (top - bottom);
+	persp[8] = A;
+	persp[9] = B;
+	persp[10] = C;
+	persp[11] = -1.0f;
+	persp[14] = D;
+	persp[15] = 0.0f;
+
+	switch (matrixMode) {
+	case SGL_MODELVIEW:
+		multiplyMatrix(modelViewStack.top(), persp);
+		break;
+	case SGL_PROJECTION:
+		multiplyMatrix(projectionStack.top(), persp);
+		break;
+	default:
+		break;
+	}
+}
 
 void sglViewport(int x, int y, int width, int height) {
 	if (width < 0 || height < 0) {

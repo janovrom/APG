@@ -81,8 +81,13 @@
 Test leaks.
 */
 #define _CRTDBG_MAP_ALLOC
+#define _CRTDBG_MAPALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
+#ifdef _DEBUG
+#define DEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
+#define new DEBUG_NEW
+#endif
 
 using namespace std;
 
@@ -696,17 +701,15 @@ void DrawTestScene0B(void)
   //float r=0.5f;
   // line test
   sglPointSize(1);
-    for(int i=0; i<numSegments; i++) {
+  for(int i=0; i<numSegments; i++) {
 	sglColor3f(i/(float)numSegments,i/(float)numSegments,i/(float)numSegments);
 	float angle = angleStep*(float)i;
 	sglBegin(SGL_LINES);
-	//sglColor3f(0, 1, 1);
 	sglVertex2f(centerX, centerY );
-	//sglColor3f(1, 0, 0);
 	sglVertex2f(centerX + r*cosf(angle), centerY + r*sinf(angle));
 	sglEnd();
   }
-  
+
   /**/
   sglColor3f(1,1,1);
   sglPointSize(3);
@@ -1163,7 +1166,8 @@ void myKeyboard (unsigned char key, int x, int y)
 
 int main(int argc, char **argv) 
 {
-
+	_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG);
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #if USE_GUI
 	// Initialize GLUT
   glutInit(&argc, argv);
@@ -1522,6 +1526,7 @@ int main(int argc, char **argv)
   cout<<"TotalTime : "<<totalTime<<endl;
   CleanUp();
 #endif
+
   _CrtDumpMemoryLeaks();
   return 0;
 }
