@@ -288,6 +288,15 @@ void sglEnd(void)
 	case sglEElementType::SGL_POINTS:
 		drawPoints();
 		break;
+	case sglEElementType::SGL_LINES:
+		drawLines();
+		break;
+	case sglEElementType::SGL_LINE_STRIP:
+		drawLineStrip();
+		break;
+	case sglEElementType::SGL_LINE_LOOP:
+		drawLineLoop();
+		break;
 	default:
 		break;
 	}
