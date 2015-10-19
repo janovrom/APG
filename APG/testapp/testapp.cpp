@@ -714,16 +714,16 @@ void DrawTestScene0B(void)
   sglColor3f(1,1,1);
   sglPointSize(3);
   sglBegin(SGL_LINES);
-  sglColor3f(1, 1, 0);
-  sglVertex2f(100.0f, 200.0f);
-  sglColor3f(0, 1, 1);
-  sglVertex2f(50.0f, 50.0f);
+  sglColor3f(1, 0, 0);
+  sglVertex2f(300.0f, 300.0f);
+  sglColor3f(0, 1, 0);
+  sglVertex2f(200.0f, 300.0f);
   sglEnd();
   sglBegin(SGL_POINTS);
-  sglColor3f(0, 0, 1);
-  sglVertex2f(100.0f, 200.0f);
+  sglColor3f(1, 0, 0);
+  sglVertex2f(300.0f, 300.0f);
   sglColor3f(0, 1, 0);
-  sglVertex2f(50.0f, 50.0f);
+  sglVertex2f(200.0f, 300.0f);
   sglEnd();
   */
 }

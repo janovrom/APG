@@ -88,7 +88,7 @@ void sglFinish(void) {
 	for (;!modelViewStack.empty();) {
 		delete[] modelViewStack.top();
 		modelViewStack.pop();
-	}
+}
 	for (; !projectionStack.empty();) {
 		delete[] projectionStack.top();
 		projectionStack.pop();
@@ -232,12 +232,7 @@ void drawMeAPoint(inputPoint4f& point)
 	delete transformed;
 }
 
-void setPixel(int x, int y)
-{
-
-}
-
-void drawMeALine(inputPoint4f& start, inputPoint4f& end)
+void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 {
 	int W, H, tempX, tempY, offset;
 
@@ -327,13 +322,141 @@ void drawMeALine(inputPoint4f& start, inputPoint4f& end)
 				*(colorBuffer + offset + 2) = (lerpValue)*startT->b + (1 - lerpValue)*endT->b;
 			}
 		}
+	}
+	//printf("IMPLEMENT ME: sgl.cpp -> drawMeALine \n");
+		}
 
+void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
+
+{
+	int W, H, offset;
+	int x0, x1, y0, y1, swap;
+
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
+	W = cont->getWidth();
+	H = cont->getHeight();
+	float *colorBuffer = cont->getColorBuffer();
+
+	inputPoint4f *startT = transformThePoint(start);
+	inputPoint4f *endT = transformThePoint(end);
+
+	x0 = (*startT).x;
+	y0 = (*startT).y;
+	x1 = (*endT).x;
+	y1 = (*endT).y;
+
+	int dx, dy;
+
+	bool drivingX = std::abs(x1 - x0) > std::abs(y1 - y0);
+
+	if (!drivingX)
+	{
+		swap = x0;
+		x0 = y0;
+		y0 = swap;
+
+		swap = x1;
+		x1 = y1;
+		y1 = swap;
 	}
 
-	delete endT;
-	delete startT;
+	if (x0 > x1)
+	{
+		swap = x0;
+		x0 = x1;
+		x1 = swap;
 
-	//printf("IMPLEMENT ME: sgl.cpp -> drawMeALine \n");
+		swap = y0;
+		y0 = y1;
+		y1 = swap;
+
+		inputPoint4f *swap4f = startT;
+		startT = endT;
+		endT = swap4f;
+	}
+
+	//dx = x1 - x0;
+	dx = std::abs(x1 - x0);
+	dy = y1 - y0;
+	int yAdd = (dy < 0) ? -1 : 1;
+	dy = std::abs(dy);
+
+	int p = 2 * dy - dx;
+	int c0 = 2 * dy;
+	int c1 = c0 - 2 * dx;
+	int tempY = y0;
+	float lerpValue;
+
+
+	if (drivingX)
+	{
+		if (x0 >= 0 && x0 < W && y0 >= 0 && y0 < H)
+		{
+			offset = y0*W * 3 + x0 * 3;
+
+			*(colorBuffer + offset) = startT->r;
+			*(colorBuffer + offset + 1) = startT->g;
+			*(colorBuffer + offset + 2) = startT->b;
+		}
+
+		}
+	else {
+		if (y0 >= 0 && y0 < W && x0 >= 0 && x0 < H)
+		{
+			offset = x0*W * 3 + y0 * 3;
+
+			*(colorBuffer + offset) = startT->r;
+			*(colorBuffer + offset + 1) = startT->g;
+			*(colorBuffer + offset + 2) = startT->b;
+		}
+	}
+
+
+	for (int tempX = x0 + 1; tempX <= x1; tempX++)
+	{
+		lerpValue = (float)(tempX - x0) / (x1 - x0);
+		if (p < 0)
+		{
+			p += c0;
+			//lerpValue = 0;
+		}else {
+			p += c1;
+			tempY += yAdd;
+			//lerpValue = 1;
+		}
+		if(drivingX)
+		{
+			if (tempX >= 0 && tempX < W && tempY >= 0 && tempY < H)
+			{
+				offset = tempY*W * 3 + tempX * 3;
+
+				*(colorBuffer + offset) = (1-lerpValue)*startT->r + (lerpValue)*endT->r;
+				*(colorBuffer + offset + 1) = (1-lerpValue)*startT->g + (lerpValue)*endT->g;
+				*(colorBuffer + offset + 2) = (1-lerpValue)*startT->b + (lerpValue)*endT->b;
+			}
+
+		}else{
+			if (tempY >= 0 && tempY < W && tempX >= 0 && tempX < H)
+			{
+				offset = tempX*W * 3 + tempY * 3;
+
+				*(colorBuffer + offset) = (1 - lerpValue)*startT->r + (lerpValue)*endT->r;
+				*(colorBuffer + offset + 1) = (1 - lerpValue)*startT->g + (lerpValue)*endT->g;
+				*(colorBuffer + offset + 2) = (1 - lerpValue)*startT->b + (lerpValue)*endT->b;
+			}
+		}
+	}
+
+}
+
+void drawMeALine(inputPoint4f& start, inputPoint4f& end)
+{
+	if(true)
+	{
+		drawMeALineBresenham(start, end);
+	}else{
+		drawMeALineNaive(start, end);
+	}
 }
 
 void drawPoints() 
