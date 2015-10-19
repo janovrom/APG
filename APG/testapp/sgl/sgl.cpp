@@ -154,23 +154,6 @@ void sglBegin(sglEElementType mode)
 	drawingMethod = mode;
 }
 
-float dotVectors(const float* left, inputPoint4f& vector, int i) {
-	float tmp = 0;
-	tmp += left[i] * vector.x;
-	tmp += left[i + 4] * vector.y;
-	tmp += left[i + 8] * vector.z;
-	tmp += left[i + 12] * vector.w;
-
-	return tmp;
-}
-
-void multiplyMatrixVector(const float* matrix, inputPoint4f& vector, inputPoint4f& output) {
-	output.x = dotVectors(matrix, vector, 0);
-	output.y = dotVectors(matrix, vector, 1);
-	output.z = dotVectors(matrix, vector, 2);
-	output.w = dotVectors(matrix, vector, 3);
-}
-
 /*
 Transformations of points will be applied here in future, now it just returns input.
 */
@@ -245,8 +228,8 @@ void drawMeALine(inputPoint4f& start, inputPoint4f& end)
 	H = cont->getHeight();
 	float *colorBuffer = cont->getColorBuffer();
 
-	inputPoint4f startT = transformThePoint(start);
-	inputPoint4f endT = transformThePoint(end);
+	inputPoint4f *startT = transformThePoint(start);
+	inputPoint4f *endT = transformThePoint(end);
 
 	/*if (startT.x > endT.x)
 	{
@@ -258,10 +241,10 @@ void drawMeALine(inputPoint4f& start, inputPoint4f& end)
 	int x0, x1, y0, y1;
 	float k;
 
-	x0 = startT.x;
-	y0 = startT.y;
-	x1 = endT.x;
-	y1 = endT.y;
+	x0 = startT->x;
+	y0 = startT->y;
+	x1 = endT->x;
+	y1 = endT->y;
 
 
 	int endValue;
@@ -291,9 +274,9 @@ void drawMeALine(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX*3;
 
-				*(colorBuffer + offset) = (lerpValue)*startT.r + (1-lerpValue)*endT.r;
-				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
-				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
+				*(colorBuffer + offset) = (lerpValue)*startT->r + (1-lerpValue)*endT->r;
+				*(colorBuffer + offset + 1) = (lerpValue)*startT->g + (1 - lerpValue)*endT->g;
+				*(colorBuffer + offset + 2) = (lerpValue)*startT->b + (1 - lerpValue)*endT->b;
 			}
 		}
 	}else {
@@ -321,15 +304,16 @@ void drawMeALine(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX * 3;
 
-				*(colorBuffer + offset) = (lerpValue)*startT.r + (1 - lerpValue)*endT.r;
-				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
-				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
+				*(colorBuffer + offset) = (lerpValue)*startT->r + (1 - lerpValue)*endT->r;
+				*(colorBuffer + offset + 1) = (lerpValue)*startT->g + (1 - lerpValue)*endT->g;
+				*(colorBuffer + offset + 2) = (lerpValue)*startT->b + (1 - lerpValue)*endT->b;
 			}
 		}
 
 	}
 
-
+	delete endT;
+	delete startT;
 
 	//printf("IMPLEMENT ME: sgl.cpp -> drawMeALine \n");
 }
@@ -560,12 +544,6 @@ void sglPopMatrix(void) {
 	}
 }
 
-void copyMatrix(float* output, const float* input) {
-	for (int i = 0; i < 16; ++i) {
-		output[i] = input[i];
-	}
-}
-
 void sglLoadIdentity(void) {
 	if (hasBegun || contextWrapper.empty()) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
@@ -600,26 +578,6 @@ void sglLoadMatrix(const float *matrix) {
 	default:
 		break;
 	}
-}
-
-float dotVectors(const float* left, const float* right, int i, int j) {
-	float tmp = 0;
-	tmp += left[i] * right[j];
-	tmp += left[i+4] * right[j+1];
-	tmp += left[i+8] * right[j+2];
-	tmp += left[i+12] * right[j+3];
-
-	return tmp;
-}
-
-void multiplyMatrix(float* left, const float* right) {
-	float output[16];
-	for (int i = 0; i < 4; ++i) {
-		for (int j = 0; j < 4; ++j) {
-			output[i*j + j] = dotVectors(left, right, i, j);
-		}
-	}
-	copyMatrix(left, output);
 }
 
 void sglMultMatrix(const float *matrix) {
@@ -749,9 +707,9 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
 
 	float ortho[16];
 	copyMatrix(ortho, identity);
-	ortho[0] = 2.0 / (right - left);
-	ortho[5] = 2.0 / (top - bottom);
-	ortho[10] = - 2.0 / (far - near);
+	ortho[0] = 2.0f / (right - left);
+	ortho[5] = 2.0f / (top - bottom);
+	ortho[10] = - 2.0f / (far - near);
 	ortho[12] = - (right + left) / (right - left);
 	ortho[13] = - (top + bottom) / (top - bottom);
 	ortho[14] = -(far + near) / (far - near);
@@ -779,18 +737,18 @@ void sglFrustum(float left, float right, float bottom, float top, float near, fl
 	float A = (right + left) / (right - left);
 	float B = (top + bottom) / (top - bottom);
 	float C = (far + near) / (far - near);
-	float D = - 2 * far * near / (far - near);
+	float D = - 2.0f * far * near / (far - near);
 
 	float persp[16];
 	copyMatrix(persp, identity);
-	persp[0] = 2.0 * near/ (right - left);
-	persp[5] = 2.0 * near / (top - bottom);
+	persp[0] = 2.0f * near/ (right - left);
+	persp[5] = 2.0f * near / (top - bottom);
 	persp[8] = A;
 	persp[9] = B;
 	persp[10] = C;
-	persp[11] = -1.0;
+	persp[11] = -1.0f;
 	persp[14] = D;
-	persp[15] = 0.0;
+	persp[15] = 0.0f;
 
 	switch (matrixMode) {
 	case SGL_MODELVIEW:

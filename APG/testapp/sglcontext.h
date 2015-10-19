@@ -17,27 +17,62 @@
 std::stack<float *> modelViewStack;
 std::stack<float *> projectionStack;
 
-void multiplyMatrix(float* left, const float* right);
-/**
-	Compute dot product of line and column of left and right matrix.
-*/
-float dotVectors(const float* left, const float* right, int i, int j);
-/**
-	Compute dot product of line of left matrix and vector.
-*/
-float dotVectors(const float* left, inputPoint4f& vector, int i);
-void multiplyMatrixVector(const float* matrix, inputPoint4f& vector, inputPoint4f& output);
-void copyMatrix(float* output, const float* input);
-
-float identity[16] ={	1.0, 0.0, 0.0, 0.0,
-						0.0, 1.0, 0.0, 0.0, 
-						0.0, 0.0, 1.0, 0.0, 
-						0.0, 0.0, 0.0, 1.0};
+float identity[16] ={	1.0f, 0.0f, 0.0f, 0.0f,
+						0.0f, 1.0f, 0.0f, 0.0f, 
+						0.0f, 0.0f, 1.0f, 0.0f, 
+						0.0f, 0.0f, 0.0f, 1.0f};
 
 struct inputPoint4f {
 	float x, y, z, w;
 	float r, g, b, a;
 };
+
+/**
+Compute dot product of line and column of left and right matrix.
+*/
+float dotVectors(const float* left, const float* right, int i, int j) {
+	float tmp = 0;
+	tmp += left[i] * right[j];
+	tmp += left[i + 4] * right[j + 1];
+	tmp += left[i + 8] * right[j + 2];
+	tmp += left[i + 12] * right[j + 3];
+
+	return tmp;
+}
+/**
+Compute dot product of line of left matrix and vector.
+*/
+float dotVectors(const float* left, inputPoint4f& vector, int i) {
+	float tmp = 0;
+	tmp += left[i] * vector.x;
+	tmp += left[i + 4] * vector.y;
+	tmp += left[i + 8] * vector.z;
+	tmp += left[i + 12] * vector.w;
+
+	return tmp;
+}
+void multiplyMatrixVector(const float* matrix, inputPoint4f& vector, inputPoint4f& output) {
+	output.x = dotVectors(matrix, vector, 0);
+	output.y = dotVectors(matrix, vector, 1);
+	output.z = dotVectors(matrix, vector, 2);
+	output.w = dotVectors(matrix, vector, 3);
+}
+
+void copyMatrix(float* output, const float* input) {
+	for (int i = 0; i < 16; ++i) {
+		output[i] = input[i];
+	}
+}
+
+void multiplyMatrix(float* left, const float* right) {
+	float output[16];
+	for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			output[i*j + j] = dotVectors(left, right, i, j);
+		}
+	}
+	copyMatrix(left, output);
+}
 
 /**
 It provides information if sglBegin was called. It is set to false
