@@ -16,7 +16,7 @@
 
 #ifdef TEST0
 #define TEST_0A
-#define TEST_0B
+//#define TEST_0B
 #endif
 
 #ifdef TEST1
@@ -76,6 +76,13 @@
 #include "timer.h"
 #include "nffread.h"
 #include "nffstore.h"
+
+/**
+Test leaks.
+*/
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
 
 using namespace std;
 
@@ -1170,7 +1177,7 @@ int main(int argc, char **argv)
   cout << "test 0a..." << flush;
   timer.Restart();
   sglSetContext(_contexts[0]);
-  sglClearColor(0, 0, 0, 1);
+  sglClearColor(0.5, 0, 0, 1);
   sglClear(SGL_COLOR_BUFFER_BIT);
   DrawTestScene0A();
   cout << "done in " << timer.UserTime() << " sec." << endl;
@@ -1496,6 +1503,6 @@ int main(int argc, char **argv)
   cout<<"TotalTime : "<<totalTime<<endl;
   CleanUp();
 #endif
-  
+  _CrtDumpMemoryLeaks();
   return 0;
 }

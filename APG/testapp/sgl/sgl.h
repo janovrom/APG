@@ -39,13 +39,13 @@ enum sglEErrorCode {
 /// Types of graphic elements which are specified using the sglVertexXf command
 enum sglEElementType {
   /// Points
-  SGL_POINTS = 1,
+  SGL_POINTS = 1,			//done
   /// Lines
-  SGL_LINES,
+  SGL_LINES,				//done
   /// Line strip
-  SGL_LINE_STRIP,
+  SGL_LINE_STRIP,			//done
   /// Closed line strip
-  SGL_LINE_LOOP,
+  SGL_LINE_LOOP,			//done
   /// Triangle list
   SGL_TRIANGLES,
   /// General, non-convex polygon

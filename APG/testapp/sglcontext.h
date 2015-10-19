@@ -5,17 +5,6 @@
 #define MIN_CONTEXTS 32
 
 
-
-struct inputPoint2f {
-	float x, y;
-	float r, g, b;
-};
-
-struct inputPoint3f {
-	float x, y, z;
-	float r, g, b;
-};
-
 struct inputPoint4f {
 	float x, y, z, w;
 	float r, g, b;
@@ -34,13 +23,13 @@ Do not do depth test as default.
 bool testDepth = false;
 sglEMatrixMode matrixMode = SGL_MODELVIEW;
 
-float pointSize = 0, colorVertexR = 0, colorVertexG = 0, colorVertexB = 0;
+float pointSize = 0;
+float colorVertexR = 0, colorVertexG = 0, colorVertexB = 0;
+float colorClearR = 0, colorClearG = 0, colorClearB = 0;
 
 bool depthEnabled = false;
-int drawingMethod = 0;
+sglEElementType drawingMethod = sglEElementType::SGL_POINTS;
 
-std::queue<inputPoint2f> queue2f;
-std::queue<inputPoint3f> queue3f;
 std::queue<inputPoint4f> queue4f;
 
 class SglContext {
@@ -52,10 +41,6 @@ private:
 	*/
 	float *colorBuffer;
 	float *depthBuffer;
-	/**
-	Color to which is color buffer saved.
-	*/
-	static float r, g, b, alpha;
 public:
 	SglContext(int width, int height) : width{ width }, height{ height } {
 		colorBuffer = new float[width*height * 3];
@@ -74,19 +59,21 @@ public:
 		return depthBuffer;
 	}
 
-	void setClearColor(float r, float g, float b, float alpha) {
-		this->alpha = alpha;
-		this->r = r;
-		this->g = g;
-		this->b = b;
+	int getWidth() {
+		return width;
 	}
 
-	void clearColor() {
-		for (int i = 0; i < width; i += 3) {
-			for (int j = 0; j < height; j += 3) {
-				*(colorBuffer + i*j + j) = r;
-				*(colorBuffer + i*j + j + 1) = g;
-				*(colorBuffer + i*j + j + 2) = b;
+	int getHeight() {
+		return height;
+	}
+
+	void clearColor(float r, float g, float b) {
+		int w = width * 3;
+		for (int i = 0; i < height; i++) {
+			for (int j = 0; j < w; j += 3) {
+				*(colorBuffer + i*w + j) = r;
+				*(colorBuffer + i*w + j + 1) = g;
+				*(colorBuffer + i*w + j + 2) = b;
 			}
 		}
 	}
@@ -98,23 +85,25 @@ public:
 			}
 		}
 	}
+
 };
 
 struct ContextWrapper {
+public:
 	int activeContext = -1;
 	SglContext* contexts[MIN_CONTEXTS];
-	int size = MIN_CONTEXTS;
+	int length = MIN_CONTEXTS;
 	int count = 0;
 
 	SglContext* operator[] (int id) {
-		if (id < size)
+		if (id < length)
 			return contexts[id];
 		else
 			return nullptr;
 	}
 
 	void clear() {
-		for (int i = 0; i < size; ++i) {
+		for (int i = 0; i < length; ++i) {
 			delete contexts[i];
 			contexts[i] = nullptr;
 		}
@@ -122,7 +111,7 @@ struct ContextWrapper {
 	}
 
 	void clear(int id) {
-		if (id < size) {
+		if (id < length) {
 			delete contexts[id];
 			--count;
 		}
@@ -133,17 +122,16 @@ struct ContextWrapper {
 	}
 
 	int size() {
-		return size;
+		return length;
 	}
 
-	void add(SglContext* c);
-private:
-	ContextWrapper();
+	int add(SglContext* c);
+
 	int findFirstEmpty() {
-		for (int i = 0; i < size; ++i) {
+		for (int i = 0; i < length; ++i) {
 			if (contexts[i] == nullptr)
 				return i;
 		}
 		return -1;
 	}
-} contexts;
+} contextWrapper;
