@@ -158,6 +158,7 @@ Transformations of points will be applied here in future, now it just returns in
 */
 inputPoint4f transformThePoint(inputPoint4f& point)
 {
+	printf("IMPLEMENT ME: sgl.cpp -> transformThePoint \n");
 	return point;
 }
 
@@ -196,9 +197,102 @@ void drawMeAPoint(inputPoint4f& point)
 	}
 }
 
+void drawMeALine(inputPoint4f& start, inputPoint4f& end)
+{
+	printf("IMPLEMENT ME: sgl.cpp -> drawMeALine \n");
+}
+
+void drawPoints() 
+{
+	inputPoint4f tempPoint;
+
+	while (!queue4f.empty())
+	{
+		tempPoint = queue4f.front();
+		drawMeAPoint(tempPoint);
+		queue4f.pop();
+	}
+}
+
+void drawLines()
+{
+	inputPoint4f tempPoint1;
+	inputPoint4f tempPoint2;
+
+	while (!queue4f.empty())
+	{
+		tempPoint1 = queue4f.front();
+		queue4f.pop();
+
+		if (queue4f.empty()) { break; }
+
+		tempPoint2 = queue4f.front();
+		queue4f.pop();
+
+		drawMeALine(tempPoint1, tempPoint2);
+	}
+}
+
+void drawLineStrip()
+{
+	inputPoint4f tempPoint1;
+	inputPoint4f tempPoint2;
+
+	if (queue4f.empty()) { return; }
+	tempPoint2 = queue4f.front();
+	queue4f.pop();
+
+	while (!queue4f.empty())
+	{
+		tempPoint1 = tempPoint2;
+		tempPoint2 = queue4f.front();
+		queue4f.pop();
+
+		drawMeALine(tempPoint1, tempPoint2);
+	}
+}
+
+void drawLineLoop()
+{
+	inputPoint4f origin;
+	inputPoint4f tempPoint1;
+	inputPoint4f tempPoint2;
+
+	if (queue4f.empty()) { return; }
+	tempPoint2 = origin = queue4f.front();
+	queue4f.pop();
+	int counter = 1;
+
+	while (!queue4f.empty())
+	{
+		tempPoint1 = tempPoint2;
+		tempPoint2 = queue4f.front();
+		queue4f.pop();
+		counter++;
+
+		drawMeALine(tempPoint1, tempPoint2);
+	}
+
+	if (counter > 1)
+	{
+		drawMeALine(tempPoint2, origin);
+	}
+}
+
 void sglEnd(void) 
 {
 	if (!hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
+
+	switch (drawingMethod)
+	{
+	case sglEElementType::SGL_POINTS:
+		drawPoints();
+		break;
+	default:
+		break;
+	}
+
+
 	hasBegun = false;
 }
 
