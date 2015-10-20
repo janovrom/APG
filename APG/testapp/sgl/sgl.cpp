@@ -608,7 +608,76 @@ void sglVertex2f(float x, float y)
 	delete point;
 }
 
-void sglCircle(float x, float y, float z, float radius) {}
+void setSymPoints(int x, int y, int xs, int ys, inputPoint4f *point) {
+	point->x = x + xs;
+	point->y = y + ys;
+	drawMeAPoint(*point);
+
+	point->x = -point->x;
+	drawMeAPoint(*point);
+
+	point->y = -point->y;
+	drawMeAPoint(*point);
+
+	point->x = -point->x;
+	drawMeAPoint(*point);
+
+	point->x = y + ys;
+	point->x = x + xs;
+	drawMeAPoint(*point);
+
+	point->x = -point->x;
+	drawMeAPoint(*point);
+
+	point->y = -point->y;
+	drawMeAPoint(*point);
+
+	point->x = -point->x;
+	drawMeAPoint(*point);
+}
+
+void sglCircle(float x, float y, float z, float radius) {
+	if (hasBegun) { 
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); 
+		return; 
+	}
+	int psize = pointSize;
+	pointSize = 1;
+
+	if (radius < 0) {
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		return;
+	}
+
+	inputPoint4f *point = new inputPoint4f;
+	point->z = 0;
+	point->w = 1;
+	point->r = colorVertexR;
+	point->g = colorVertexG;
+	point->b = colorVertexB;
+	point->a = 0;
+
+	int xp, yp, p;
+	xp = 0;
+	yp = radius;
+	p = 3 - 2 * radius;
+	while (xp < yp) {
+		setSymPoints(xp, yp, x, y, point);
+		if (p < 0) {
+			p = p + 4 * xp + 6;
+		}
+		else {
+			p = p + 4 * (xp - yp) + 10;
+			--yp;
+		}
+		++xp;
+	}
+	if (xp == yp)
+		setSymPoints(xp, yp, x, y, point);
+
+	pointSize = psize;
+	delete point;
+}
 
 void sglEllipse(float x, float y, float z, float a, float b) {}
 
@@ -871,9 +940,11 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
 void sglFrustum(float left, float right, float bottom, float top, float near, float far) {
 	if (near < 0 || far < 0) {
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		return;
 	}
 	else if (hasBegun || contextWrapper.empty()) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
 	}
 
 	float A = (right + left) / (right - left);
