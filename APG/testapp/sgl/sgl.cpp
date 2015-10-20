@@ -175,38 +175,30 @@ void sglBegin(sglEElementType mode)
 /*
 Transformations of points will be applied here in future, now it just returns input.
 */
-inputPoint4f* transformThePoint(inputPoint4f& point)
+void transformThePoint(inputPoint4f& point, inputPoint4f& output)
 {
-	//printf("IMPLEMENT ME: sgl.cpp -> transformThePoint \n");
-	inputPoint4f *ret = new inputPoint4f;
-	ret->r = point.r;
-	ret->g = point.g;
-	ret->b = point.b;
-	ret->a = point.a;
-	switch (matrixMode) {
-	case SGL_MODELVIEW:
-		multiplyMatrixVector(modelViewStack.top(), point, *ret);
-		break;
-	case SGL_PROJECTION:
-		multiplyMatrixVector(projectionStack.top(), point, *ret);
-		break;
-	default:
-		break;
-}
-	return ret;
+	// careful this is only shallow copy, though for floats it is sufficient
+	inputPoint4f tmp (point);
+	multiplyMatrixVector(modelViewStack.top(), point, tmp);
+	multiplyMatrixVector(projectionStack.top(), tmp, output);
 }
 
 void drawMeAPoint(inputPoint4f& point) 
 {
-	inputPoint4f* transformed = transformThePoint(point);
+	inputPoint4f output;
+	output.r = point.r;
+	output.g = point.g;
+	output.b = point.b;
+	output.a = point.a;
+	transformThePoint(point, output);
 
 	int W, H, x, y;
 
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = (int)transformed->x;
-	y = (int)transformed->y;
+	x = (int)output.x;
+	y = (int)output.y;
 
 	float *colorBuffer = cont->getColorBuffer();
 
@@ -221,15 +213,14 @@ void drawMeAPoint(inputPoint4f& point)
 		{
 			if (i >= 0 && i < W && j >= 0 && j < H)
 			{
-				offset = j*W * 3 + i;
-				*(colorBuffer + offset) = transformed->r;
-				*(colorBuffer + offset + 1) = transformed->g;
-				*(colorBuffer + offset + 2) = transformed->b;
+				offset = j*W * 3 + i * 3;
+				*(colorBuffer + offset) = output.r;
+				*(colorBuffer + offset + 1) = output.g;
+				*(colorBuffer + offset + 2) = output.b;
 			}
 		}
 	}
 
-	delete transformed;
 }
 
 void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
@@ -241,8 +232,10 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 	H = cont->getHeight();
 	float *colorBuffer = cont->getColorBuffer();
 
-	inputPoint4f *startT = transformThePoint(start);
-	inputPoint4f *endT = transformThePoint(end);
+	inputPoint4f startT;
+	transformThePoint(start, startT);
+	inputPoint4f endT;
+	transformThePoint(end, endT);
 
 	/*if (startT.x > endT.x)
 	{
@@ -254,10 +247,10 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 	int x0, x1, y0, y1;
 	float k;
 
-	x0 = startT->x;
-	y0 = startT->y;
-	x1 = endT->x;
-	y1 = endT->y;
+	x0 = startT.x;
+	y0 = startT.y;
+	x1 = endT.x;
+	y1 = endT.y;
 
 
 	int endValue;
@@ -287,9 +280,9 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX*3;
 
-				*(colorBuffer + offset) = (lerpValue)*startT->r + (1-lerpValue)*endT->r;
-				*(colorBuffer + offset + 1) = (lerpValue)*startT->g + (1 - lerpValue)*endT->g;
-				*(colorBuffer + offset + 2) = (lerpValue)*startT->b + (1 - lerpValue)*endT->b;
+				*(colorBuffer + offset) = (lerpValue)*startT.r + (1-lerpValue)*endT.r;
+				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
+				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
 			}
 		}
 	}else {
@@ -317,9 +310,9 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX * 3;
 
-				*(colorBuffer + offset) = (lerpValue)*startT->r + (1 - lerpValue)*endT->r;
-				*(colorBuffer + offset + 1) = (lerpValue)*startT->g + (1 - lerpValue)*endT->g;
-				*(colorBuffer + offset + 2) = (lerpValue)*startT->b + (1 - lerpValue)*endT->b;
+				*(colorBuffer + offset) = (lerpValue)*startT.r + (1 - lerpValue)*endT.r;
+				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
+				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
 			}
 		}
 	}
@@ -337,13 +330,15 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 	H = cont->getHeight();
 	float *colorBuffer = cont->getColorBuffer();
 
-	inputPoint4f *startT = transformThePoint(start);
-	inputPoint4f *endT = transformThePoint(end);
+	inputPoint4f startT;
+	transformThePoint(start, startT);
+	inputPoint4f endT;
+	transformThePoint(end, endT);
 
-	x0 = (*startT).x;
-	y0 = (*startT).y;
-	x1 = (*endT).x;
-	y1 = (*endT).y;
+	x0 = (startT).x;
+	y0 = (startT).y;
+	x1 = (endT).x;
+	y1 = (endT).y;
 
 	int dx, dy;
 
@@ -370,7 +365,7 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 		y0 = y1;
 		y1 = swap;
 
-		inputPoint4f *swap4f = startT;
+		inputPoint4f swap4f = startT;
 		startT = endT;
 		endT = swap4f;
 	}
@@ -394,9 +389,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 		{
 			offset = y0*W * 3 + x0 * 3;
 
-			*(colorBuffer + offset) = startT->r;
-			*(colorBuffer + offset + 1) = startT->g;
-			*(colorBuffer + offset + 2) = startT->b;
+			*(colorBuffer + offset) = startT.r;
+			*(colorBuffer + offset + 1) = startT.g;
+			*(colorBuffer + offset + 2) = startT.b;
 		}
 
 		}
@@ -405,9 +400,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 		{
 			offset = x0*W * 3 + y0 * 3;
 
-			*(colorBuffer + offset) = startT->r;
-			*(colorBuffer + offset + 1) = startT->g;
-			*(colorBuffer + offset + 2) = startT->b;
+			*(colorBuffer + offset) = startT.r;
+			*(colorBuffer + offset + 1) = startT.g;
+			*(colorBuffer + offset + 2) = startT.b;
 		}
 	}
 
@@ -430,9 +425,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX * 3;
 
-				*(colorBuffer + offset) = (1-lerpValue)*startT->r + (lerpValue)*endT->r;
-				*(colorBuffer + offset + 1) = (1-lerpValue)*startT->g + (lerpValue)*endT->g;
-				*(colorBuffer + offset + 2) = (1-lerpValue)*startT->b + (lerpValue)*endT->b;
+				*(colorBuffer + offset) = (1-lerpValue)*startT.r + (lerpValue)*endT.r;
+				*(colorBuffer + offset + 1) = (1-lerpValue)*startT.g + (lerpValue)*endT.g;
+				*(colorBuffer + offset + 2) = (1-lerpValue)*startT.b + (lerpValue)*endT.b;
 			}
 
 		}else{
@@ -440,9 +435,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempX*W * 3 + tempY * 3;
 
-				*(colorBuffer + offset) = (1 - lerpValue)*startT->r + (lerpValue)*endT->r;
-				*(colorBuffer + offset + 1) = (1 - lerpValue)*startT->g + (lerpValue)*endT->g;
-				*(colorBuffer + offset + 2) = (1 - lerpValue)*startT->b + (lerpValue)*endT->b;
+				*(colorBuffer + offset) = (1 - lerpValue)*startT.r + (lerpValue)*endT.r;
+				*(colorBuffer + offset + 1) = (1 - lerpValue)*startT.g + (lerpValue)*endT.g;
+				*(colorBuffer + offset + 2) = (1 - lerpValue)*startT.b + (lerpValue)*endT.b;
 			}
 		}
 	}
@@ -608,32 +603,32 @@ void sglVertex2f(float x, float y)
 	delete point;
 }
 
-void setSymPoints(int x, int y, int xs, int ys, inputPoint4f *point) {
-	point->x = x + xs;
-	point->y = y + ys;
-	drawMeAPoint(*point);
+void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
+	point.x = x + xs;
+	point.y = y + ys;
+	drawMeAPoint(point);
 
-	point->x = -point->x;
-	drawMeAPoint(*point);
+	point.x = xs - x;
+	drawMeAPoint(point);
 
-	point->y = -point->y;
-	drawMeAPoint(*point);
+	point.y = ys - y;
+	drawMeAPoint(point);
 
-	point->x = -point->x;
-	drawMeAPoint(*point);
+	point.x = x + xs;
+	drawMeAPoint(point);
 
-	point->x = y + ys;
-	point->x = x + xs;
-	drawMeAPoint(*point);
+	point.x = y + ys;
+	point.y = x + xs;
+	drawMeAPoint(point);
 
-	point->x = -point->x;
-	drawMeAPoint(*point);
+	point.x = ys - y;
+	drawMeAPoint(point);
 
-	point->y = -point->y;
-	drawMeAPoint(*point);
+	point.y = xs - x;
+	drawMeAPoint(point);
 
-	point->x = -point->x;
-	drawMeAPoint(*point);
+	point.x = y + ys;
+	drawMeAPoint(point);
 }
 
 void sglCircle(float x, float y, float z, float radius) {
@@ -649,13 +644,13 @@ void sglCircle(float x, float y, float z, float radius) {
 		return;
 	}
 
-	inputPoint4f *point = new inputPoint4f;
-	point->z = 0;
-	point->w = 1;
-	point->r = colorVertexR;
-	point->g = colorVertexG;
-	point->b = colorVertexB;
-	point->a = 0;
+	inputPoint4f point;
+	point.z = 0;
+	point.w = 1;
+	point.r = colorVertexR;
+	point.g = colorVertexG;
+	point.b = colorVertexB;
+	point.a = 0;
 
 	int xp, yp, p;
 	xp = 0;
@@ -676,7 +671,6 @@ void sglCircle(float x, float y, float z, float radius) {
 		setSymPoints(xp, yp, x, y, point);
 
 	pointSize = psize;
-	delete point;
 }
 
 void sglEllipse(float x, float y, float z, float a, float b) {}
