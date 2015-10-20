@@ -15,12 +15,12 @@
 //#define TEST5
 
 #ifdef TEST0
-#define TEST_0A
+//#define TEST_0A
 //#define TEST_0B
 #endif
 
 #ifdef TEST1
-//#define TEST_1A
+#define TEST_1A
 //#define TEST_1B
 //#define TEST_1C
 #endif
@@ -837,7 +837,6 @@ void DrawTestScene1A(void)
     sglArc(offsetx,offsety,  0,rr,0,M_PI/2);
     sglArc(offsetx+4,offsety,0,rr,M_PI*2/2,M_PI*3/2);
   }
-  sglCircle(50, 50, 0, 10);
 }
 
  

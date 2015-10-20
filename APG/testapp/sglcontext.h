@@ -32,10 +32,10 @@ Compute dot product of line and column of left and right matrix.
 */
 float dotVectors(const float* left, const float* right, int i, int j) {
 	float tmp = 0;
-	tmp += left[i] * right[j];
-	tmp += left[i + 4] * right[j + 1];
-	tmp += left[i + 8] * right[j + 2];
-	tmp += left[i + 12] * right[j + 3];
+	tmp += left[i] * right[j * 4];
+	tmp += left[i + 4] * right[j * 4 + 1];
+	tmp += left[i + 8] * right[j * 4 + 2];
+	tmp += left[i + 12] * right[j * 4 + 3];
 
 	return tmp;
 }
@@ -68,7 +68,7 @@ void multiplyMatrix(float* left, const float* right) {
 	float output[16];
 	for (int i = 0; i < 4; ++i) {
 		for (int j = 0; j < 4; ++j) {
-			output[i*j + j] = dotVectors(left, right, i, j);
+			output[i*4 + j] = dotVectors(left, right, i, j);
 		}
 	}
 	copyMatrix(left, output);

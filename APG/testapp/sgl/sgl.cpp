@@ -197,8 +197,12 @@ void drawMeAPoint(inputPoint4f& point)
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = (int)output.x;
-	y = (int)output.y;
+	//x = (int)(output.x);
+	//y = (int)(output.y);
+
+	// there should be perspective divide and viewport
+	x = (output.x + 1) * (windowWidth / 2.0f) + offsetX;
+	y = (output.y + 1) * (windowHeight / 2.0f) + offsetY;
 
 	float *colorBuffer = cont->getColorBuffer();
 
@@ -233,8 +237,14 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 	float *colorBuffer = cont->getColorBuffer();
 
 	inputPoint4f startT;
+	startT.r = start.r;
+	startT.g = start.g;
+	startT.b = start.b;
 	transformThePoint(start, startT);
 	inputPoint4f endT;
+	endT.r = end.r;
+	endT.g = end.g;
+	endT.b = end.b;
 	transformThePoint(end, endT);
 
 	/*if (startT.x > endT.x)
@@ -331,8 +341,14 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 	float *colorBuffer = cont->getColorBuffer();
 
 	inputPoint4f startT;
+	startT.r = start.r;
+	startT.g = start.g;
+	startT.b = start.b;
 	transformThePoint(start, startT);
 	inputPoint4f endT;
+	endT.r = end.r;
+	endT.g = end.g;
+	endT.b = end.b;
 	transformThePoint(end, endT);
 
 	x0 = (startT).x;
@@ -600,7 +616,6 @@ void sglVertex2f(float x, float y)
 	(*point).b = colorVertexB;
 
 	queue4f.push(*point);
-	delete point;
 }
 
 void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
@@ -686,7 +701,7 @@ void sglMatrixMode( sglEMatrixMode mode ) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 		return;
 	}
-	if (mode != SGL_MODELVIEW || mode != SGL_PROJECTION) {
+	if (mode != SGL_MODELVIEW && mode != SGL_PROJECTION) {
 		setErrCode(SGL_INVALID_ENUM);
 		return;
 	}
@@ -918,7 +933,12 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
 	ortho[12] = - (right + left) / (right - left);
 	ortho[13] = - (top + bottom) / (top - bottom);
 	ortho[14] = -(far + near) / (far - near);
-
+	/*for (int i = 0; i < 4; i++) {
+		printf("\n");
+		for (int j = i; j < 16; j += 4) {
+			printf("%f ", ortho[j]);
+		}
+	}*/
 	switch (matrixMode) {
 	case SGL_MODELVIEW:
 		multiplyMatrix(modelViewStack.top(), ortho);
