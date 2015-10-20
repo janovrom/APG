@@ -71,7 +71,7 @@ int ContextWrapper::add(SglContext* c) {
 
 void sglInit(void) {
 	hasBegun = false;
-	offsetX = offsetY = windowWidth = windowHeight = 0;
+	viewportOffsetX = viewportOffsetY = viewportWidth = viewportHeight = 0;
 	float *mv = new float[16];
 	float *proj = new float[16];
 	copyMatrix(mv, identity);
@@ -84,7 +84,7 @@ void sglFinish(void) {
 	contextWrapper.clear();
 	contextWrapper.activeContext = -1;
 	hasBegun = false;
-	offsetX = offsetY = windowWidth = windowHeight = 0;
+	viewportOffsetX = viewportOffsetY = viewportWidth = viewportHeight = 0;
 	for (;!modelViewStack.empty();) {
 		delete[] modelViewStack.top();
 		modelViewStack.pop();
@@ -181,6 +181,10 @@ void transformThePoint(inputPoint4f& point, inputPoint4f& output)
 	inputPoint4f tmp (point);
 	multiplyMatrixVector(modelViewStack.top(), point, tmp);
 	multiplyMatrixVector(projectionStack.top(), tmp, output);
+
+	// there should be perspective divide and viewport
+	output.x = (output.x + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
+	output.y = (output.y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
 }
 
 void drawMeAPoint(inputPoint4f& point) 
@@ -197,12 +201,8 @@ void drawMeAPoint(inputPoint4f& point)
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	//x = (int)(output.x);
-	//y = (int)(output.y);
-
-	// there should be perspective divide and viewport
-	x = (output.x + 1) * (windowWidth / 2.0f) + offsetX;
-	y = (output.y + 1) * (windowHeight / 2.0f) + offsetY;
+	x = (int)(output.x);
+	y = (int)(output.y);
 
 	float *colorBuffer = cont->getColorBuffer();
 
@@ -997,10 +997,10 @@ void sglViewport(int x, int y, int width, int height) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 	}
 	else {
-		offsetX = x;
-		offsetY = y;
-		windowWidth = width;
-		windowHeight = height;
+		viewportOffsetX = x;
+		viewportOffsetY = y;
+		viewportWidth = width;
+		viewportHeight = height;
 	}
 }
 

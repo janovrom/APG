@@ -80,7 +80,7 @@ and after sglBegin call changed to true (likewise after sglEnd
 it is set to false).
 */
 bool hasBegun;
-int offsetX, offsetY, windowWidth, windowHeight;
+int viewportOffsetX, viewportOffsetY, viewportWidth, viewportHeight;
 /**
 Do not do depth test as default.
 */
