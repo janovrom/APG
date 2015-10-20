@@ -178,13 +178,15 @@ Transformations of points will be applied here in future, now it just returns in
 void transformThePoint(inputPoint4f& point, inputPoint4f& output)
 {
 	// careful this is only shallow copy, though for floats it is sufficient
-	inputPoint4f tmp (point);
-	multiplyMatrixVector(modelViewStack.top(), point, tmp);
-	multiplyMatrixVector(projectionStack.top(), tmp, output);
+	//inputPoint4f tmp (point);
+	//multiplyMatrixVector(modelViewStack.top(), point, tmp);
+	//multiplyMatrixVector(projectionStack.top(), tmp, output);
+
+	multiplyMatrixVector(viewportMatrix, point, output);
 
 	// there should be perspective divide and viewport
-	output.x = (output.x + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
-	output.y = (output.y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
+	//output.x = (output.x + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
+	//output.y = (output.y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
 }
 
 void drawMeAPoint(inputPoint4f& point) 
@@ -551,6 +553,16 @@ void sglEnd(void)
 {
 	if (!hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
 
+	copyMatrix(viewportMatrix, identity);
+	viewportMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
+	viewportMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
+	viewportMatrix[10] = 0.5f;
+	viewportMatrix[12] = (viewportWidth / 2.0f) + viewportOffsetX;
+	viewportMatrix[13] = (viewportHeight / 2.0f) + viewportOffsetY;
+	viewportMatrix[14] = 0.5f;
+	multiplyMatrix(viewportMatrix, projectionStack.top());
+	multiplyMatrix(viewportMatrix, modelViewStack.top());
+
 	switch (drawingMethod)
 	{
 	case sglEElementType::SGL_POINTS:
@@ -658,6 +670,11 @@ void sglCircle(float x, float y, float z, float radius) {
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 		return;
 	}
+
+	// there should be perspective divide and viewport
+	x = (x + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
+	y = (y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
+	radius = (radius + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
 
 	inputPoint4f point;
 	point.z = 0;

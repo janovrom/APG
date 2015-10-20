@@ -74,6 +74,9 @@ void multiplyMatrix(float* left, const float* right) {
 	copyMatrix(left, output);
 }
 
+float multipliedMatrix[16];
+float viewportMatrix[16];
+
 /**
 It provides information if sglBegin was called. It is set to false
 and after sglBegin call changed to true (likewise after sglEnd
