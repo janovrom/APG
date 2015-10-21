@@ -832,10 +832,9 @@ void DrawTestScene1A(void)
   offsetx = r;
 
   sglColor3f(1,1,1);
-
   for(float rr=0.4; rr<=4; rr+=0.4) {
     sglArc(offsetx,offsety,  0,rr,0,M_PI/2);
-    sglArc(offsetx+4,offsety,0,rr,M_PI*2/2,M_PI*3/2);
+    sglArc(offsetx+3,offsety,0,rr,M_PI*2/2,M_PI*3/2);
   }
 }
 
