@@ -71,7 +71,7 @@ int ContextWrapper::add(SglContext* c) {
 
 void sglInit(void) {
 	hasBegun = false;
-	offsetX = offsetY = windowWidth = windowHeight = 0;
+	viewportOffsetX = viewportOffsetY = viewportWidth = viewportHeight = 0;
 	float *mv = new float[16];
 	float *proj = new float[16];
 	copyMatrix(mv, identity);
@@ -84,7 +84,7 @@ void sglFinish(void) {
 	contextWrapper.clear();
 	contextWrapper.activeContext = -1;
 	hasBegun = false;
-	offsetX = offsetY = windowWidth = windowHeight = 0;
+	viewportOffsetX = viewportOffsetY = viewportWidth = viewportHeight = 0;
 	for (;!modelViewStack.empty();) {
 		delete[] modelViewStack.top();
 		modelViewStack.pop();
@@ -175,38 +175,67 @@ void sglBegin(sglEElementType mode)
 /*
 Transformations of points will be applied here in future, now it just returns input.
 */
-inputPoint4f* transformThePoint(inputPoint4f& point)
+void transformThePoint(inputPoint4f& point, inputPoint4f& output)
 {
-	//printf("IMPLEMENT ME: sgl.cpp -> transformThePoint \n");
-	inputPoint4f *ret = new inputPoint4f;
-	ret->r = point.r;
-	ret->g = point.g;
-	ret->b = point.b;
-	ret->a = point.a;
-	switch (matrixMode) {
-	case SGL_MODELVIEW:
-		multiplyMatrixVector(modelViewStack.top(), point, *ret);
-		break;
-	case SGL_PROJECTION:
-		multiplyMatrixVector(projectionStack.top(), point, *ret);
-		break;
-	default:
-		break;
+	// careful this is only shallow copy, though for floats it is sufficient
+	//inputPoint4f tmp (point);
+	//multiplyMatrixVector(modelViewStack.top(), point, tmp);
+	//multiplyMatrixVector(projectionStack.top(), tmp, output);
+
+	multiplyMatrixVector(viewportMatrix, point, output);
+
+	// there should be perspective divide and viewport
+	//output.x = (output.x + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
+	//output.y = (output.y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
 }
-	return ret;
+
+void drawPointNoTransform (inputPoint4f& point) {
+	int W, H, x, y;
+
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
+	W = cont->getWidth();
+	H = cont->getHeight();
+	x = (int)(point.x);
+	y = (int)(point.y);
+
+	float *colorBuffer = cont->getColorBuffer();
+
+	int offset;
+
+	int size = (int)((pointSize - 1) / 2);
+	int sizeCorrection = 1 - (int)pointSize % 2;
+
+	for (int i = x - size; i <= x + (size + sizeCorrection); i++)
+	{
+		for (int j = y - size; j <= y + (size + sizeCorrection); j++)
+		{
+			if (i >= 0 && i < W && j >= 0 && j < H)
+			{
+				offset = j*W * 3 + i * 3;
+				*(colorBuffer + offset) = point.r;
+				*(colorBuffer + offset + 1) = point.g;
+				*(colorBuffer + offset + 2) = point.b;
+}
+		}
+	}
 }
 
 void drawMeAPoint(inputPoint4f& point) 
 {
-	inputPoint4f* transformed = transformThePoint(point);
+	inputPoint4f output;
+	output.r = point.r;
+	output.g = point.g;
+	output.b = point.b;
+	output.a = point.a;
+	transformThePoint(point, output);
 
 	int W, H, x, y;
 
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = (int)transformed->x;
-	y = (int)transformed->y;
+	x = (int)(output.x);
+	y = (int)(output.y);
 
 	float *colorBuffer = cont->getColorBuffer();
 
@@ -222,14 +251,13 @@ void drawMeAPoint(inputPoint4f& point)
 			if (i >= 0 && i < W && j >= 0 && j < H)
 			{
 				offset = j*W * 3 + i * 3;
-				*(colorBuffer + offset) = transformed->r + 1;
-				*(colorBuffer + offset + 1) = transformed->g +1;
-				*(colorBuffer + offset + 2) = transformed->b + 1;
+				*(colorBuffer + offset) = output.r;
+				*(colorBuffer + offset + 1) = output.g;
+				*(colorBuffer + offset + 2) = output.b;
 			}
 		}
 	}
 
-	delete transformed;
 }
 
 void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
@@ -241,8 +269,16 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 	H = cont->getHeight();
 	float *colorBuffer = cont->getColorBuffer();
 
-	inputPoint4f *startT = transformThePoint(start);
-	inputPoint4f *endT = transformThePoint(end);
+	inputPoint4f startT;
+	startT.r = start.r;
+	startT.g = start.g;
+	startT.b = start.b;
+	transformThePoint(start, startT);
+	inputPoint4f endT;
+	endT.r = end.r;
+	endT.g = end.g;
+	endT.b = end.b;
+	transformThePoint(end, endT);
 
 	/*if (startT.x > endT.x)
 	{
@@ -254,10 +290,10 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 	int x0, x1, y0, y1;
 	float k;
 
-	x0 = startT->x;
-	y0 = startT->y;
-	x1 = endT->x;
-	y1 = endT->y;
+	x0 = startT.x;
+	y0 = startT.y;
+	x1 = endT.x;
+	y1 = endT.y;
 
 
 	int endValue;
@@ -287,9 +323,9 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX*3;
 
-				*(colorBuffer + offset) = (lerpValue)*startT->r + (1-lerpValue)*endT->r;
-				*(colorBuffer + offset + 1) = (lerpValue)*startT->g + (1 - lerpValue)*endT->g;
-				*(colorBuffer + offset + 2) = (lerpValue)*startT->b + (1 - lerpValue)*endT->b;
+				*(colorBuffer + offset) = (lerpValue)*startT.r + (1-lerpValue)*endT.r;
+				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
+				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
 			}
 		}
 	}else {
@@ -317,9 +353,9 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX * 3;
 
-				*(colorBuffer + offset) = (lerpValue)*startT->r + (1 - lerpValue)*endT->r;
-				*(colorBuffer + offset + 1) = (lerpValue)*startT->g + (1 - lerpValue)*endT->g;
-				*(colorBuffer + offset + 2) = (lerpValue)*startT->b + (1 - lerpValue)*endT->b;
+				*(colorBuffer + offset) = (lerpValue)*startT.r + (1 - lerpValue)*endT.r;
+				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
+				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
 			}
 		}
 	}
@@ -337,13 +373,21 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 	H = cont->getHeight();
 	float *colorBuffer = cont->getColorBuffer();
 
-	inputPoint4f *startT = transformThePoint(start);
-	inputPoint4f *endT = transformThePoint(end);
+	inputPoint4f startT;
+	startT.r = start.r;
+	startT.g = start.g;
+	startT.b = start.b;
+	transformThePoint(start, startT);
+	inputPoint4f endT;
+	endT.r = end.r;
+	endT.g = end.g;
+	endT.b = end.b;
+	transformThePoint(end, endT);
 
-	x0 = (*startT).x;
-	y0 = (*startT).y;
-	x1 = (*endT).x;
-	y1 = (*endT).y;
+	x0 = (startT).x;
+	y0 = (startT).y;
+	x1 = (endT).x;
+	y1 = (endT).y;
 
 	int dx, dy;
 
@@ -370,7 +414,7 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 		y0 = y1;
 		y1 = swap;
 
-		inputPoint4f *swap4f = startT;
+		inputPoint4f swap4f = startT;
 		startT = endT;
 		endT = swap4f;
 	}
@@ -394,9 +438,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 		{
 			offset = y0*W * 3 + x0 * 3;
 
-			*(colorBuffer + offset) = startT->r;
-			*(colorBuffer + offset + 1) = startT->g;
-			*(colorBuffer + offset + 2) = startT->b;
+			*(colorBuffer + offset) = startT.r;
+			*(colorBuffer + offset + 1) = startT.g;
+			*(colorBuffer + offset + 2) = startT.b;
 		}
 
 		}
@@ -405,9 +449,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 		{
 			offset = x0*W * 3 + y0 * 3;
 
-			*(colorBuffer + offset) = startT->r;
-			*(colorBuffer + offset + 1) = startT->g;
-			*(colorBuffer + offset + 2) = startT->b;
+			*(colorBuffer + offset) = startT.r;
+			*(colorBuffer + offset + 1) = startT.g;
+			*(colorBuffer + offset + 2) = startT.b;
 		}
 	}
 
@@ -430,9 +474,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempY*W * 3 + tempX * 3;
 
-				*(colorBuffer + offset) = (1-lerpValue)*startT->r + (lerpValue)*endT->r;
-				*(colorBuffer + offset + 1) = (1-lerpValue)*startT->g + (lerpValue)*endT->g;
-				*(colorBuffer + offset + 2) = (1-lerpValue)*startT->b + (lerpValue)*endT->b;
+				*(colorBuffer + offset) = (1-lerpValue)*startT.r + (lerpValue)*endT.r;
+				*(colorBuffer + offset + 1) = (1-lerpValue)*startT.g + (lerpValue)*endT.g;
+				*(colorBuffer + offset + 2) = (1-lerpValue)*startT.b + (lerpValue)*endT.b;
 			}
 
 		}else{
@@ -440,9 +484,9 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 			{
 				offset = tempX*W * 3 + tempY * 3;
 
-				*(colorBuffer + offset) = (1 - lerpValue)*startT->r + (lerpValue)*endT->r;
-				*(colorBuffer + offset + 1) = (1 - lerpValue)*startT->g + (lerpValue)*endT->g;
-				*(colorBuffer + offset + 2) = (1 - lerpValue)*startT->b + (lerpValue)*endT->b;
+				*(colorBuffer + offset) = (1 - lerpValue)*startT.r + (lerpValue)*endT.r;
+				*(colorBuffer + offset + 1) = (1 - lerpValue)*startT.g + (lerpValue)*endT.g;
+				*(colorBuffer + offset + 2) = (1 - lerpValue)*startT.b + (lerpValue)*endT.b;
 			}
 		}
 	}
@@ -540,6 +584,16 @@ void sglEnd(void)
 {
 	if (!hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
 
+	copyMatrix(viewportMatrix, identity);
+	viewportMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
+	viewportMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
+	viewportMatrix[10] = 0.5f;
+	viewportMatrix[12] = (viewportWidth / 2.0f) + viewportOffsetX;
+	viewportMatrix[13] = (viewportHeight / 2.0f) + viewportOffsetY;
+	viewportMatrix[14] = 0.5f;
+	multiplyMatrix(viewportMatrix, projectionStack.top());
+	multiplyMatrix(viewportMatrix, modelViewStack.top());
+
 	switch (drawingMethod)
 	{
 	case sglEElementType::SGL_POINTS:
@@ -605,14 +659,214 @@ void sglVertex2f(float x, float y)
 	(*point).b = colorVertexB;
 
 	queue4f.push(*point);
-	delete point;
 }
 
-void sglCircle(float x, float y, float z, float radius) {}
+void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
+	point.x = x + xs;
+	point.y = y + ys;
+	drawPointNoTransform(point);
 
-void sglEllipse(float x, float y, float z, float a, float b) {}
+	point.x = xs - x;
+	drawPointNoTransform(point);
 
-void sglArc(float x, float y, float z, float radius, float from, float to) {}
+	point.y = ys - y;
+	drawPointNoTransform(point);
+
+	point.x = x + xs;
+	drawPointNoTransform(point);
+	
+	point.x = y + xs;
+	point.y = x + ys;
+	drawPointNoTransform(point);
+
+	point.x = xs - y;
+	drawPointNoTransform(point);
+
+	point.y = ys - x;
+	drawPointNoTransform(point);
+
+	point.x = y + xs;
+	drawPointNoTransform(point);
+}
+
+void sglCircle(float x, float y, float z, float radius) {
+	if (hasBegun) { 
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); 
+		return; 
+	}
+	int psize = pointSize;
+	pointSize = 1;
+
+	if (radius < 0) {
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		return;
+	}
+
+	// there should be perspective divide and viewport
+	//x = (x + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
+	//y = (y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
+	//radius = (radius + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
+
+	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
+	radius *= scaleFactor;
+
+	inputPoint4f point;
+	point.x = x;
+	point.y = y;
+	point.z = 0;
+	point.w = 1;
+	point.r = colorVertexR;
+	point.g = colorVertexG;
+	point.b = colorVertexB;
+	point.a = 0;
+
+	inputPoint4f output;
+	transformThePoint(point, output);
+	x = output.x;
+	y = output.y;
+
+	int xp, yp, p;
+	xp = 0;
+	yp = radius;
+	p = 3 - 2 * radius;
+	while (xp < yp) {
+		setSymPoints(xp, yp, x, y, point);
+		if (p < 0) {
+			p = p + 4 * xp + 6;
+		}
+		else {
+			p = p + 4 * (xp - yp) + 10;
+			--yp;
+		}
+		++xp;
+	}
+	if (xp == yp)
+		setSymPoints(xp, yp, x, y, point);
+
+	pointSize = psize;
+}
+
+void sglEllipse(float x, float y, float z, float a, float b) {
+
+}
+
+void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float radius, float from, float to) {
+	point.x = x + xs;
+	point.y = y + ys;
+	float angle = acos(x / radius);
+	if (y < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.x = xs - x;
+	angle = acos(-x / radius);
+	if (y < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.y = ys - y;
+	angle = acos(-x / radius);
+	if (-y < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.x = x + xs;
+	angle = acos(x / radius);
+	if (-y < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.x = y + xs;
+	point.y = x + ys;
+	angle = acos(y / radius);
+	if (x < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.x = xs - y;
+	angle = acos(-y / radius);
+	if (x < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.y = ys - x;
+	angle = acos(-y / radius);
+	if (-x < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.x = y + xs;
+	angle = acos(y / radius);
+	if (-x < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+}
+
+void sglArc(float x, float y, float z, float radius, float from, float to) {
+	if (hasBegun) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+	int psize = pointSize;
+	pointSize = 1;
+
+	if (radius < 0) {
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		return;
+}
+
+	while (from > 3.14159)
+		from -= 3.14159;
+
+	while (to > 3.14159)
+		to -= 3.14159;
+
+	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
+	radius *= scaleFactor;
+	
+	inputPoint4f point;
+	point.x = x;
+	point.y = y;
+	point.z = 0;
+	point.w = 1;
+	point.r = colorVertexR;
+	point.g = colorVertexG;
+	point.b = colorVertexB;
+	point.a = 0;
+
+	inputPoint4f output;
+	transformThePoint(point, output);
+	x = output.x;
+	y = output.y;
+
+	int xp, yp, p;
+	xp = 0;
+	yp = radius;
+	p = 3 - 2 * radius;
+	while (xp < yp) {
+		setSymPointsLimit(xp, yp, x, y, point, radius, from, to);
+		if (p < 0) {
+			p = p + 4 * xp + 6;
+		}
+		else {
+			p = p + 4 * (xp - yp) + 10;
+			--yp;
+		}
+		++xp;
+	}
+	if (xp == yp)
+		setSymPointsLimit(xp, yp, x, y, point, radius, from, to);
+
+	pointSize = psize;
+}
 
 //---------------------------------------------------------------------------
 // Transform functions
@@ -623,7 +877,7 @@ void sglMatrixMode( sglEMatrixMode mode ) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 		return;
 	}
-	if (mode != SGL_MODELVIEW || mode != SGL_PROJECTION) {
+	if (mode != SGL_MODELVIEW && mode != SGL_PROJECTION) {
 		setErrCode(SGL_INVALID_ENUM);
 		return;
 	}
@@ -855,7 +1109,12 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
 	ortho[12] = - (right + left) / (right - left);
 	ortho[13] = - (top + bottom) / (top - bottom);
 	ortho[14] = -(far + near) / (far - near);
-
+	/*for (int i = 0; i < 4; i++) {
+		printf("\n");
+		for (int j = i; j < 16; j += 4) {
+			printf("%f ", ortho[j]);
+		}
+	}*/
 	switch (matrixMode) {
 	case SGL_MODELVIEW:
 		multiplyMatrix(modelViewStack.top(), ortho);
@@ -871,9 +1130,11 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
 void sglFrustum(float left, float right, float bottom, float top, float near, float far) {
 	if (near < 0 || far < 0) {
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		return;
 	}
 	else if (hasBegun || contextWrapper.empty()) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
 	}
 
 	float A = (right + left) / (right - left);
@@ -912,10 +1173,10 @@ void sglViewport(int x, int y, int width, int height) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 	}
 	else {
-		offsetX = x;
-		offsetY = y;
-		windowWidth = width;
-		windowHeight = height;
+		viewportOffsetX = x;
+		viewportOffsetY = y;
+		viewportWidth = width;
+		viewportHeight = height;
 	}
 }
 
