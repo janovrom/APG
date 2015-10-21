@@ -823,11 +823,11 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 		return;
 }
 
-	while (from > 3.14159)
-		from -= 3.14159;
+	while (from > 2*3.14159)
+		from -= 2*3.14159;
 
-	while (to > 3.14159)
-		to -= 3.14159;
+	while (to > 2*3.14159)
+		to -= 2*3.14159;
 
 	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
 	radius *= scaleFactor;
@@ -851,6 +851,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	xp = 0;
 	yp = radius;
 	p = 3 - 2 * radius;
+	//printf("drawing from %f to %f at [%f, %f] \n",from, to, x, y);
 	while (xp < yp) {
 		setSymPointsLimit(xp, yp, x, y, point, radius, from, to);
 		if (p < 0) {
