@@ -215,7 +215,7 @@ void drawPointNoTransform (inputPoint4f& point) {
 				*(colorBuffer + offset) = point.r;
 				*(colorBuffer + offset + 1) = point.g;
 				*(colorBuffer + offset + 2) = point.b;
-			}
+}
 		}
 	}
 }
@@ -821,7 +821,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	if (radius < 0) {
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 		return;
-	}
+}
 
 	while (from >= 2 * 3.14159274)
 		from -= 2 * 3.14159274;
