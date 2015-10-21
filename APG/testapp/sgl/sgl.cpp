@@ -755,28 +755,28 @@ void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float 
 	point.y = y + ys;
 	float angle = acos(x / radius);
 	if (y < 0)
-		angle = angle + 3.14159;
+		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
 		drawPointNoTransform(point);
 
 	point.x = xs - x;
 	angle = acos(-x / radius);
 	if (y < 0)
-		angle = angle + 3.14159;
+		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
 		drawPointNoTransform(point);
 
 	point.y = ys - y;
 	angle = acos(-x / radius);
 	if (-y < 0)
-		angle = angle + 3.14159;
+		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
 		drawPointNoTransform(point);
 
 	point.x = x + xs;
 	angle = acos(x / radius);
 	if (-y < 0)
-		angle = angle + 3.14159;
+		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
 		drawPointNoTransform(point);
 
@@ -784,28 +784,28 @@ void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float 
 	point.y = x + ys;
 	angle = acos(y / radius);
 	if (x < 0)
-		angle = angle + 3.14159;
+		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
 		drawPointNoTransform(point);
 
 	point.x = xs - y;
 	angle = acos(-y / radius);
 	if (x < 0)
-		angle = angle + 3.14159;
+		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
 		drawPointNoTransform(point);
 
 	point.y = ys - x;
 	angle = acos(-y / radius);
 	if (-x < 0)
-		angle = angle + 3.14159;
+		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
 		drawPointNoTransform(point);
 
 	point.x = y + xs;
 	angle = acos(y / radius);
 	if (-x < 0)
-		angle = angle + 3.14159;
+		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
 		drawPointNoTransform(point);
 }
@@ -823,11 +823,11 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 		return;
 }
 
-	while (from > 2*3.14159)
-		from -= 2*3.14159;
+	while (from >= 2 * 3.14159274)
+		from -= 2 * 3.14159274;
 
-	while (to > 2*3.14159)
-		to -= 2*3.14159;
+	while (to >= 2 * 3.14159274)
+		to -= 2 * 3.14159274;
 
 	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
 	radius *= scaleFactor;
