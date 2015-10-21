@@ -189,6 +189,37 @@ void transformThePoint(inputPoint4f& point, inputPoint4f& output)
 	//output.y = (output.y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
 }
 
+void drawPointNoTransform (inputPoint4f& point) {
+	int W, H, x, y;
+
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
+	W = cont->getWidth();
+	H = cont->getHeight();
+	x = (int)(point.x);
+	y = (int)(point.y);
+
+	float *colorBuffer = cont->getColorBuffer();
+
+	int offset;
+
+	int size = (int)((pointSize - 1) / 2);
+	int sizeCorrection = 1 - (int)pointSize % 2;
+
+	for (int i = x - size; i <= x + (size + sizeCorrection); i++)
+	{
+		for (int j = y - size; j <= y + (size + sizeCorrection); j++)
+		{
+			if (i >= 0 && i < W && j >= 0 && j < H)
+			{
+				offset = j*W * 3 + i * 3;
+				*(colorBuffer + offset) = point.r;
+				*(colorBuffer + offset + 1) = point.g;
+				*(colorBuffer + offset + 2) = point.b;
+			}
+		}
+	}
+}
+
 void drawMeAPoint(inputPoint4f& point) 
 {
 	inputPoint4f output;
@@ -633,29 +664,29 @@ void sglVertex2f(float x, float y)
 void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
 	point.x = x + xs;
 	point.y = y + ys;
-	drawMeAPoint(point);
+	drawPointNoTransform(point);
 
 	point.x = xs - x;
-	drawMeAPoint(point);
+	drawPointNoTransform(point);
 
 	point.y = ys - y;
-	drawMeAPoint(point);
+	drawPointNoTransform(point);
 
 	point.x = x + xs;
-	drawMeAPoint(point);
+	drawPointNoTransform(point);
+	
+	point.x = y + xs;
+	point.y = x + ys;
+	drawPointNoTransform(point);
 
-	point.x = y + ys;
-	point.y = x + xs;
-	drawMeAPoint(point);
+	point.x = xs - y;
+	drawPointNoTransform(point);
 
-	point.x = ys - y;
-	drawMeAPoint(point);
+	point.y = ys - x;
+	drawPointNoTransform(point);
 
-	point.y = xs - x;
-	drawMeAPoint(point);
-
-	point.x = y + ys;
-	drawMeAPoint(point);
+	point.x = y + xs;
+	drawPointNoTransform(point);
 }
 
 void sglCircle(float x, float y, float z, float radius) {
@@ -672,17 +703,27 @@ void sglCircle(float x, float y, float z, float radius) {
 	}
 
 	// there should be perspective divide and viewport
-	x = (x + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
-	y = (y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
-	radius = (radius + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
+	//x = (x + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
+	//y = (y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
+	//radius = (radius + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
+
+	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
+	radius *= scaleFactor;
 
 	inputPoint4f point;
+	point.x = x;
+	point.y = y;
 	point.z = 0;
 	point.w = 1;
 	point.r = colorVertexR;
 	point.g = colorVertexG;
 	point.b = colorVertexB;
 	point.a = 0;
+
+	inputPoint4f output;
+	transformThePoint(point, output);
+	x = output.x;
+	y = output.y;
 
 	int xp, yp, p;
 	xp = 0;
@@ -705,9 +746,127 @@ void sglCircle(float x, float y, float z, float radius) {
 	pointSize = psize;
 }
 
-void sglEllipse(float x, float y, float z, float a, float b) {}
+void sglEllipse(float x, float y, float z, float a, float b) {
 
-void sglArc(float x, float y, float z, float radius, float from, float to) {}
+}
+
+void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float radius, float from, float to) {
+	point.x = x + xs;
+	point.y = y + ys;
+	float angle = acos(x / radius);
+	if (y < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.x = xs - x;
+	angle = acos(-x / radius);
+	if (y < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.y = ys - y;
+	angle = acos(-x / radius);
+	if (-y < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.x = x + xs;
+	angle = acos(x / radius);
+	if (-y < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.x = y + xs;
+	point.y = x + ys;
+	angle = acos(y / radius);
+	if (x < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.x = xs - y;
+	angle = acos(-y / radius);
+	if (x < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.y = ys - x;
+	angle = acos(-y / radius);
+	if (-x < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+
+	point.x = y + xs;
+	angle = acos(y / radius);
+	if (-x < 0)
+		angle = angle + 3.14159;
+	if (angle >= from && angle <= to)
+		drawPointNoTransform(point);
+}
+
+void sglArc(float x, float y, float z, float radius, float from, float to) {
+	if (hasBegun) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+	int psize = pointSize;
+	pointSize = 1;
+
+	if (radius < 0) {
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		return;
+	}
+
+	while (from > 3.14159)
+		from -= 3.14159;
+
+	while (to > 3.14159)
+		to -= 3.14159;
+
+	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
+	radius *= scaleFactor;
+	
+	inputPoint4f point;
+	point.x = x;
+	point.y = y;
+	point.z = 0;
+	point.w = 1;
+	point.r = colorVertexR;
+	point.g = colorVertexG;
+	point.b = colorVertexB;
+	point.a = 0;
+
+	inputPoint4f output;
+	transformThePoint(point, output);
+	x = output.x;
+	y = output.y;
+
+	int xp, yp, p;
+	xp = 0;
+	yp = radius;
+	p = 3 - 2 * radius;
+	while (xp < yp) {
+		setSymPointsLimit(xp, yp, x, y, point, radius, from, to);
+		if (p < 0) {
+			p = p + 4 * xp + 6;
+		}
+		else {
+			p = p + 4 * (xp - yp) + 10;
+			--yp;
+		}
+		++xp;
+	}
+	if (xp == yp)
+		setSymPointsLimit(xp, yp, x, y, point, radius, from, to);
+
+	pointSize = psize;
+}
 
 //---------------------------------------------------------------------------
 // Transform functions
