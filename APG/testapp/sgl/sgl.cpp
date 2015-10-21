@@ -221,10 +221,10 @@ void drawMeAPoint(inputPoint4f& point)
 		{
 			if (i >= 0 && i < W && j >= 0 && j < H)
 			{
-				offset = j*W * 3 + i;
-				*(colorBuffer + offset) = transformed->r;
-				*(colorBuffer + offset + 1) = transformed->g;
-				*(colorBuffer + offset + 2) = transformed->b;
+				offset = j*W * 3 + i * 3;
+				*(colorBuffer + offset) = transformed->r + 1;
+				*(colorBuffer + offset + 1) = transformed->g +1;
+				*(colorBuffer + offset + 2) = transformed->b + 1;
 			}
 		}
 	}
