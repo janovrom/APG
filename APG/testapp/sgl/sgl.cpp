@@ -8,6 +8,11 @@
 #include "sgl.h"
 #include "sglcontext.h"
 
+//#define LINE_NAIVE
+#define ELLIPSE_SECOND
+
+
+void setPixel(float x0, float y0, float r, float g, float b);
 /// Current error code.
 static sglEErrorCode _libStatus = SGL_NO_ERROR;
 
@@ -115,13 +120,18 @@ void sglDestroyContext(int id) {
 }
 
 void sglSetContext(int id) {
-	if (id < contextWrapper.size())
+	if (id < contextWrapper.size() && id >= 0)
 		contextWrapper.activeContext = id;
 	else
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 }
 
 int sglGetContext(void) {
+	if (contextWrapper.empty())
+	{
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return -1;
+	}
 	return contextWrapper.activeContext;
 }
 
@@ -139,6 +149,7 @@ float *sglGetColorBufferPointer(void) {
 void sglClearColor (float r, float g, float b, float alpha) {
 	if (contextWrapper.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
 	}
 	else {
 		colorClearR = r;
@@ -166,8 +177,16 @@ void sglClear(unsigned what) {
 
 void sglBegin(sglEElementType mode) 
 {
-	if (hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
-	if (mode <= 0 || mode >= sglEElementType::SGL_LAST_ELEMENT_TYPE) { setErrCode(sglEErrorCode::SGL_INVALID_ENUM); return; }
+	if (hasBegun) 
+	{ 
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return; 
+	}
+	if (mode <= 0 || mode >= sglEElementType::SGL_LAST_ELEMENT_TYPE) 
+	{ 
+		setErrCode(sglEErrorCode::SGL_INVALID_ENUM); 
+		return; 
+	}
 	hasBegun = true;
 	drawingMethod = mode;
 }
@@ -495,12 +514,11 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 
 void drawMeALine(inputPoint4f* start, inputPoint4f* end)
 {
-	if(true)
-	{
-		drawMeALineBresenham(start, end);
-	}else{
+	#ifdef LINE_NAIVE
 		drawMeALineNaive(start, end);
-	}
+	#else
+		drawMeALineBresenham(start, end);
+	#endif
 }
 
 void drawPoints() 
@@ -672,6 +690,42 @@ void sglVertex2f(float x, float y)
 void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
 	point.x = x + xs;
 	point.y = y + ys;
+	//drawPointNoTransform(point);
+	setPixel(point.x,point.y, point.r, point.g, point.b);
+
+	point.x = xs - x;
+	//drawPointNoTransform(point);
+	setPixel(point.x, point.y, point.r, point.g, point.b);
+
+	point.y = ys - y;
+	//drawPointNoTransform(point);
+	setPixel(point.x, point.y, point.r, point.g, point.b);
+
+	point.x = x + xs;
+	//drawPointNoTransform(point);
+	setPixel(point.x, point.y, point.r, point.g, point.b);
+	
+	point.x = y + xs;
+	point.y = x + ys;
+	//drawPointNoTransform(point);
+	setPixel(point.x, point.y, point.r, point.g, point.b);
+
+	point.x = xs - y;
+	//drawPointNoTransform(point);
+	setPixel(point.x, point.y, point.r, point.g, point.b);
+
+	point.y = ys - x;
+	//drawPointNoTransform(point);
+	setPixel(point.x, point.y, point.r, point.g, point.b);
+
+	point.x = y + xs;
+	//drawPointNoTransform(point);
+	setPixel(point.x, point.y, point.r, point.g, point.b);
+}
+
+void setSymPointsModified(int x, int y, int xs, int ys, inputPoint4f& point) {
+	point.x = x + xs;
+	point.y = y + ys;
 	drawPointNoTransform(point);
 
 	point.x = xs - x;
@@ -682,7 +736,7 @@ void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
 
 	point.x = x + xs;
 	drawPointNoTransform(point);
-	
+	/*
 	point.x = y + xs;
 	point.y = x + ys;
 	drawPointNoTransform(point);
@@ -695,10 +749,33 @@ void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
 
 	point.x = y + xs;
 	drawPointNoTransform(point);
+	*/
+}
+
+void setPixel(float x0, float y0, float r, float g, float b)
+{
+	int W, H, x, y;
+
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
+	W = cont->getWidth();
+	H = cont->getHeight();
+	x = std::round(x0);
+	y = std::round(y0);
+
+	float *colorBuffer = cont->getColorBuffer();
+	//printf("drawing: %d %d\n", x, y);
+
+	if (x >= 0 && x < W && y >= 0 && y < H)
+	{
+		int offset = (y*W + x) * 3;
+		*(colorBuffer + offset) = r;
+		*(colorBuffer + offset + 1) = g;
+		*(colorBuffer + offset + 2) = b;
+	}
 }
 
 void sglCircle(float x, float y, float z, float radius) {
-	if (hasBegun) { 
+	if (hasBegun || contextWrapper.empty()) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); 
 		return; 
 	}
@@ -754,8 +831,92 @@ void sglCircle(float x, float y, float z, float radius) {
 	pointSize = psize;
 }
 
-void sglEllipse(float x, float y, float z, float a, float b) {
-	if (hasBegun) {
+void sglEllipseSecond(float x, float y, float z, float a, float b) {
+	if (contextWrapper.empty() || hasBegun) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+	int psize = pointSize;
+	pointSize = 1;
+
+	if (a < 0 || b < 0) {
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		return;
+	}
+
+	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
+	a *= scaleFactor;
+	b *= scaleFactor;
+
+	inputPoint4f point;
+	point.x = x;
+	point.y = y;
+	point.z = 0;
+	point.w = 1;
+	point.r = colorVertexR;
+	point.g = colorVertexG;
+	point.b = colorVertexB;
+	point.a = 0;
+
+	inputPoint4f output;
+	transformThePoint(point, output);
+	x = output.x;
+	y = output.y;
+	//setPixel(x, y, 1.0f, 0.0f, 0.0f);
+
+	float a2 = 2 * a * a;
+	float b2 = 2 * b * b;
+	float error = a*a*b;
+
+	float tempX = 0;
+	float tempY = b;
+
+	float stopY = 0;
+	float stopX = a2 * b;
+
+	while (stopY <= stopX)
+	{
+		setPixel(x + tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB);
+		setPixel(x - tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB);
+		setPixel(x + tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB);
+		setPixel(x - tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB);
+		tempX++;
+		error -= b2 * (tempX - 1);
+		stopY += b2;
+		if (error <= 0)
+		{
+			error += a2 * (tempY - 1);
+			tempY--;
+			stopX -= a2;
+		}
+	}
+
+	error = b*b*a;
+	tempX = a;
+	tempY = 0;
+	stopY = b2 * a;
+	stopX = 0;
+
+	while (stopY >= stopX)
+	{
+		setPixel(x + tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB);
+		setPixel(x - tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB);
+		setPixel(x + tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB);
+		setPixel(x - tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB);
+		tempY++;
+		error -= a2 * (tempY - 1);
+		stopX += a2;
+		if (error < 0)
+		{
+			error += b2 * (tempX - 1);
+			tempX--;
+			stopY -= b2;
+		}
+	}
+}
+
+void sglEllipseFirst(float x, float y, float z, float a, float b) {
+	if (contextWrapper.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 		return;
 	}
@@ -841,6 +1002,14 @@ void sglEllipse(float x, float y, float z, float a, float b) {
 	pointSize = psize;
 }
 
+void sglEllipse(float x, float y, float z, float a, float b) {
+	#ifdef ELLIPSE_SECOND
+		sglEllipseSecond(x, y, z, a, b);
+	#else
+		sglEllipseFirst(x, y, z, a, b);
+	#endif
+}
+
 void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float radius, float from, float to) {
 	point.x = x + xs;
 	point.y = y + ys;
@@ -848,28 +1017,32 @@ void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float 
 	if (y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointNoTransform(point);
+		setPixel(point.x, point.y, point.r, point.g, point.b);
+		//drawPointNoTransform(point);
 
 	point.x = xs - x;
 	angle = acos(-x / radius);
 	if (y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointNoTransform(point);
+		setPixel(point.x, point.y, point.r, point.g, point.b);
+		//drawPointNoTransform(point);
 
 	point.y = ys - y;
 	angle = acos(-x / radius);
 	if (-y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointNoTransform(point);
+		setPixel(point.x, point.y, point.r, point.g, point.b);
+		//drawPointNoTransform(point);
 
 	point.x = x + xs;
 	angle = acos(x / radius);
 	if (-y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointNoTransform(point);
+		setPixel(point.x, point.y, point.r, point.g, point.b);
+		//drawPointNoTransform(point);
 
 	point.x = y + xs;
 	point.y = x + ys;
@@ -877,28 +1050,32 @@ void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float 
 	if (x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointNoTransform(point);
+		setPixel(point.x, point.y, point.r, point.g, point.b);
+		//drawPointNoTransform(point);
 
 	point.x = xs - y;
 	angle = acos(-y / radius);
 	if (x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointNoTransform(point);
+		setPixel(point.x, point.y, point.r, point.g, point.b);
+		//drawPointNoTransform(point);
 
 	point.y = ys - x;
 	angle = acos(-y / radius);
 	if (-x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointNoTransform(point);
+		setPixel(point.x, point.y, point.r, point.g, point.b);
+		//drawPointNoTransform(point);
 
 	point.x = y + xs;
 	angle = acos(y / radius);
 	if (-x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointNoTransform(point);
+		setPixel(point.x, point.y, point.r, point.g, point.b);
+		//drawPointNoTransform(point);
 }
 
 void sglArc(float x, float y, float z, float radius, float from, float to) {
@@ -1293,8 +1470,17 @@ void sglAreaMode(sglEAreaMode mode) {}
 
 void sglPointSize(float size) 
 {
-	if (size <= 0) { setErrCode(sglEErrorCode::SGL_INVALID_VALUE); return; }
-	if (hasBegun || contextWrapper.empty() ) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
+	if (size <= 0) 
+	{
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		return;
+	}
+
+	if (hasBegun || contextWrapper.empty() ) 
+	{
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); 
+		return;
+	}
 	pointSize = size;
 }
 

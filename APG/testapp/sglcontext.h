@@ -182,9 +182,11 @@ public:
 	}
 
 	void clear(int id) {
-		if (id < length) {
+		if (id < length && id >= 0) {
 			delete contexts[id];
 			--count;
+		}else {
+			setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 		}
 	}
 
