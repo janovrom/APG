@@ -840,15 +840,15 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 	y = output.y;
 	//setPixel(x, y, 1.0f, 0.0f, 0.0f);
 
-	int a2 = 2 * a * a;
-	int b2 = 2 * b * b;
-	int error = a*a*b;
+	float a2 = 2 * a * a;
+	float b2 = 2 * b * b;
+	float error = a*a*b;
 
-	int tempX = 0;
-	int tempY = b;
+	float tempX = 0;
+	float tempY = b;
 
-	int stopY = 0;
-	int stopX = a2 * b;
+	float stopY = 0;
+	float stopX = a2 * b;
 
 	while (stopY <= stopX)
 	{
