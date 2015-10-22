@@ -8,6 +8,9 @@
 #include "sgl.h"
 #include "sglcontext.h"
 
+//#define LINE_NAIVE
+#define ELLIPSE_SECOND
+
 
 void setPixel(float x0, float y0, float r, float g, float b);
 /// Current error code.
@@ -117,13 +120,18 @@ void sglDestroyContext(int id) {
 }
 
 void sglSetContext(int id) {
-	if (id < contextWrapper.size())
+	if (id < contextWrapper.size() && id >= 0)
 		contextWrapper.activeContext = id;
 	else
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 }
 
 int sglGetContext(void) {
+	if (contextWrapper.empty())
+	{
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return -1;
+	}
 	return contextWrapper.activeContext;
 }
 
@@ -141,6 +149,7 @@ float *sglGetColorBufferPointer(void) {
 void sglClearColor (float r, float g, float b, float alpha) {
 	if (contextWrapper.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
 	}
 	else {
 		colorClearR = r;
@@ -168,8 +177,16 @@ void sglClear(unsigned what) {
 
 void sglBegin(sglEElementType mode) 
 {
-	if (hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
-	if (mode <= 0 || mode >= sglEElementType::SGL_LAST_ELEMENT_TYPE) { setErrCode(sglEErrorCode::SGL_INVALID_ENUM); return; }
+	if (hasBegun) 
+	{ 
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return; 
+	}
+	if (mode <= 0 || mode >= sglEElementType::SGL_LAST_ELEMENT_TYPE) 
+	{ 
+		setErrCode(sglEErrorCode::SGL_INVALID_ENUM); 
+		return; 
+	}
 	hasBegun = true;
 	drawingMethod = mode;
 }
@@ -497,12 +514,11 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 
 void drawMeALine(inputPoint4f& start, inputPoint4f& end)
 {
-	if(true)
-	{
-		drawMeALineBresenham(start, end);
-	}else{
+	#ifdef LINE_NAIVE
 		drawMeALineNaive(start, end);
-	}
+	#else
+		drawMeALineBresenham(start, end);
+	#endif
 }
 
 void drawPoints() 
@@ -751,7 +767,7 @@ void setPixel(float x0, float y0, float r, float g, float b)
 }
 
 void sglCircle(float x, float y, float z, float radius) {
-	if (hasBegun) { 
+	if (hasBegun || contextWrapper.empty()) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); 
 		return; 
 	}
@@ -808,7 +824,7 @@ void sglCircle(float x, float y, float z, float radius) {
 }
 
 void sglEllipseSecond(float x, float y, float z, float a, float b) {
-	if (hasBegun) {
+	if (contextWrapper.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 		return;
 	}
@@ -892,7 +908,7 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 }
 
 void sglEllipseFirst(float x, float y, float z, float a, float b) {
-	if (hasBegun) {
+	if (contextWrapper.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 		return;
 	}
@@ -979,11 +995,11 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 }
 
 void sglEllipse(float x, float y, float z, float a, float b) {
-	if (false) {
-		sglEllipseFirst(x, y, z, a, b);
-	} else {
+	#ifdef ELLIPSE_SECOND
 		sglEllipseSecond(x, y, z, a, b);
-	}
+	#else
+		sglEllipseFirst(x, y, z, a, b);
+	#endif
 }
 
 void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float radius, float from, float to) {
@@ -1446,8 +1462,17 @@ void sglAreaMode(sglEAreaMode mode) {}
 
 void sglPointSize(float size) 
 {
-	if (size <= 0) { setErrCode(sglEErrorCode::SGL_INVALID_VALUE); return; }
-	if (hasBegun || contextWrapper.empty() ) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
+	if (size <= 0) 
+	{
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		return;
+	}
+
+	if (hasBegun || contextWrapper.empty() ) 
+	{
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); 
+		return;
+	}
 	pointSize = size;
 }
 
