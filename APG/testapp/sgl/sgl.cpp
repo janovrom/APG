@@ -175,7 +175,7 @@ void sglBegin(sglEElementType mode)
 /*
 Transformations of points will be applied here in future, now it just returns input.
 */
-void transformThePoint(inputPoint4f& point, inputPoint4f& output)
+void transformThePoint(inputPoint4f* point, inputPoint4f& output)
 {
 	// careful this is only shallow copy, though for floats it is sufficient
 	//inputPoint4f tmp (point);
@@ -220,13 +220,13 @@ void drawPointNoTransform (inputPoint4f& point) {
 	}
 }
 
-void drawMeAPoint(inputPoint4f& point) 
+void drawMeAPoint(inputPoint4f* point) 
 {
 	inputPoint4f output;
-	output.r = point.r;
-	output.g = point.g;
-	output.b = point.b;
-	output.a = point.a;
+	output.r = point->r;
+	output.g = point->g;
+	output.b = point->b;
+	output.a = point->a;
 	transformThePoint(point, output);
 
 	int W, H, x, y;
@@ -260,7 +260,7 @@ void drawMeAPoint(inputPoint4f& point)
 
 }
 
-void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
+void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 {
 	int W, H, tempX, tempY, offset;
 
@@ -270,14 +270,14 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 	float *colorBuffer = cont->getColorBuffer();
 
 	inputPoint4f startT;
-	startT.r = start.r;
-	startT.g = start.g;
-	startT.b = start.b;
+	startT.r = start->r;
+	startT.g = start->g;
+	startT.b = start->b;
 	transformThePoint(start, startT);
 	inputPoint4f endT;
-	endT.r = end.r;
-	endT.g = end.g;
-	endT.b = end.b;
+	endT.r = end->r;
+	endT.g = end->g;
+	endT.b = end->b;
 	transformThePoint(end, endT);
 
 	/*if (startT.x > endT.x)
@@ -362,7 +362,7 @@ void drawMeALineNaive(inputPoint4f& start, inputPoint4f& end)
 	//printf("IMPLEMENT ME: sgl.cpp -> drawMeALine \n");
 		}
 
-void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
+void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 
 {
 	int W, H, offset;
@@ -374,14 +374,14 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 	float *colorBuffer = cont->getColorBuffer();
 
 	inputPoint4f startT;
-	startT.r = start.r;
-	startT.g = start.g;
-	startT.b = start.b;
+	startT.r = start->r;
+	startT.g = start->g;
+	startT.b = start->b;
 	transformThePoint(start, startT);
 	inputPoint4f endT;
-	endT.r = end.r;
-	endT.g = end.g;
-	endT.b = end.b;
+	endT.r = end->r;
+	endT.g = end->g;
+	endT.b = end->b;
 	transformThePoint(end, endT);
 
 	x0 = (startT).x;
@@ -493,7 +493,7 @@ void drawMeALineBresenham(inputPoint4f& start, inputPoint4f& end)
 
 }
 
-void drawMeALine(inputPoint4f& start, inputPoint4f& end)
+void drawMeALine(inputPoint4f* start, inputPoint4f* end)
 {
 	if(true)
 	{
@@ -505,20 +505,21 @@ void drawMeALine(inputPoint4f& start, inputPoint4f& end)
 
 void drawPoints() 
 {
-	inputPoint4f tempPoint;
+	inputPoint4f *tempPoint;
 
 	while (!queue4f.empty())
 	{
 		tempPoint = queue4f.front();
 		drawMeAPoint(tempPoint);
+		delete tempPoint;
 		queue4f.pop();
 	}
 }
 
 void drawLines()
 {
-	inputPoint4f tempPoint1;
-	inputPoint4f tempPoint2;
+	inputPoint4f *tempPoint1;
+	inputPoint4f *tempPoint2;
 
 	while (!queue4f.empty())
 	{
@@ -531,13 +532,15 @@ void drawLines()
 		queue4f.pop();
 
 		drawMeALine(tempPoint1, tempPoint2);
+		delete tempPoint1;
+		delete tempPoint2;
 	}
 }
 
 void drawLineStrip()
 {
-	inputPoint4f tempPoint1;
-	inputPoint4f tempPoint2;
+	inputPoint4f *tempPoint1;
+	inputPoint4f *tempPoint2;
 
 	if (queue4f.empty()) { return; }
 	tempPoint2 = queue4f.front();
@@ -550,17 +553,20 @@ void drawLineStrip()
 		queue4f.pop();
 
 		drawMeALine(tempPoint1, tempPoint2);
+		delete tempPoint1;
 	}
+	delete tempPoint2;
 }
 
 void drawLineLoop()
 {
 	inputPoint4f origin;
-	inputPoint4f tempPoint1;
-	inputPoint4f tempPoint2;
+	inputPoint4f *tempPoint1;
+	inputPoint4f *tempPoint2;
 
 	if (queue4f.empty()) { return; }
-	tempPoint2 = origin = queue4f.front();
+	tempPoint2 = queue4f.front();
+	origin = *tempPoint2;
 	queue4f.pop();
 	int counter = 1;
 
@@ -572,12 +578,14 @@ void drawLineLoop()
 		counter++;
 
 		drawMeALine(tempPoint1, tempPoint2);
+		delete tempPoint1;
 	}
 
 	if (counter > 1)
 	{
-		drawMeALine(tempPoint2, origin);
+		drawMeALine(tempPoint2, &origin);
 	}
+	delete tempPoint2;
 }
 
 void sglEnd(void) 
@@ -628,7 +636,7 @@ void sglVertex4f(float x, float y, float z, float w)
 	(*point).g = colorVertexG;
 	(*point).b = colorVertexB;
 
-	queue4f.push(*point);
+	queue4f.push(point);
 }
 
 void sglVertex3f(float x, float y, float z) 
@@ -643,7 +651,7 @@ void sglVertex3f(float x, float y, float z)
 	(*point).g = colorVertexG;
 	(*point).b = colorVertexB;
 
-	queue4f.push(*point);
+	queue4f.push(point);
 }
 
 void sglVertex2f(float x, float y) 
@@ -658,7 +666,7 @@ void sglVertex2f(float x, float y)
 	(*point).g = colorVertexG;
 	(*point).b = colorVertexB;
 
-	queue4f.push(*point);
+	queue4f.push(point);
 }
 
 void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
@@ -721,7 +729,7 @@ void sglCircle(float x, float y, float z, float radius) {
 	point.a = 0;
 
 	inputPoint4f output;
-	transformThePoint(point, output);
+	transformThePoint(&point, output);
 	x = output.x;
 	y = output.y;
 
@@ -774,7 +782,7 @@ void sglEllipse(float x, float y, float z, float a, float b) {
 	point.a = 0;
 
 	inputPoint4f output;
-	transformThePoint(point, output);
+	transformThePoint(&point, output);
 	x = output.x;
 	y = output.y;
 
@@ -932,7 +940,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	point.a = 0;
 
 	inputPoint4f output;
-	transformThePoint(point, output);
+	transformThePoint(&point, output);
 	x = output.x;
 	y = output.y;
 

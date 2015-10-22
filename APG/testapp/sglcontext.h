@@ -42,16 +42,16 @@ float dotVectors(const float* left, const float* right, int i, int j) {
 /**
 Compute dot product of line of left matrix and vector.
 */
-float dotVectors(const float* left, inputPoint4f& vector, int i) {
+float dotVectors(const float* left, inputPoint4f* vector, int i) {
 	float tmp = 0;
-	tmp += left[i] * vector.x;
-	tmp += left[i + 4] * vector.y;
-	tmp += left[i + 8] * vector.z;
-	tmp += left[i + 12] * vector.w;
+	tmp += left[i] * vector->x;
+	tmp += left[i + 4] * vector->y;
+	tmp += left[i + 8] * vector->z;
+	tmp += left[i + 12] * vector->w;
 
 	return tmp;
 }
-void multiplyMatrixVector(const float* matrix, inputPoint4f& vector, inputPoint4f& output) {
+void multiplyMatrixVector(const float* matrix, inputPoint4f* vector, inputPoint4f& output) {
 	output.x = dotVectors(matrix, vector, 0);
 	output.y = dotVectors(matrix, vector, 1);
 	output.z = dotVectors(matrix, vector, 2);
@@ -97,7 +97,7 @@ float colorClearR = 0, colorClearG = 0, colorClearB = 0;
 bool depthEnabled = false;
 sglEElementType drawingMethod = sglEElementType::SGL_POINTS;
 
-std::queue<inputPoint4f> queue4f;
+std::queue<inputPoint4f*> queue4f;
 
 class SglContext {
 private:
