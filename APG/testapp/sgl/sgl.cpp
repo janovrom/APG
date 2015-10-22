@@ -940,6 +940,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	xp = 0;
 	yp = radius;
 	p = 3 - 2 * radius;
+	//printf("drawing from %f to %f at [%f, %f] \n",from, to, x, y);
 	while (xp < yp) {
 		setSymPointsLimit(xp, yp, x, y, point, radius, from, to);
 		if (p < 0) {
