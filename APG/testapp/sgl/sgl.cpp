@@ -197,8 +197,8 @@ void drawPointNoTransform (inputPoint4f& point) {
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = (int)(point.x);
-	y = (int)(point.y);
+	x = (int)round(point.x);
+	y = (int)round(point.y);
 
 	float *colorBuffer = cont->getColorBuffer();
 
@@ -236,8 +236,8 @@ void drawMeAPoint(inputPoint4f& point)
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = (int)(output.x);
-	y = (int)(output.y);
+	x = (int)round(output.x);
+	y = (int)round(output.y);
 
 	float *colorBuffer = cont->getColorBuffer();
 
@@ -703,13 +703,13 @@ void setSymPointsModified(int x, int y, int xs, int ys, inputPoint4f& point) {
 	point.x = x + xs;
 	point.y = y + ys;
 	drawPointNoTransform(point);
-	
+
 	point.x = xs - x;
 	drawPointNoTransform(point);
-	
+
 	point.y = ys - y;
 	drawPointNoTransform(point);
-	
+
 	point.x = x + xs;
 	drawPointNoTransform(point);
 	/*
@@ -926,16 +926,24 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 	int a2 = a * a;
 	int b2 = b * b;
 	int fa2 = 4 * a2, fb2 = 4 * b2;
-	int xp, yp, sigma;
+	float xp, yp, sigma;
 
 	/* first half */
 	for (xp = 0, yp = b, sigma = 2 * b2 + a2*(1 - 2 * b); b2*xp <= a2*yp; xp++)
 	{
-		/*DrawPixel(xc + x, yc + y);
-		DrawPixel(xc - x, yc + y);
-		DrawPixel(xc + x, yc - y);
-		DrawPixel(xc - x, yc - y);*/
-		setSymPointsModified(xp, yp, x, y, point);
+		point.x = xp + x;
+		point.y = yp + y;
+		drawPointNoTransform(point);
+
+		point.y = y - yp;
+		drawPointNoTransform(point);
+
+		point.x = x - xp;
+		drawPointNoTransform(point);
+
+		point.y = y + yp;
+		drawPointNoTransform(point);
+		//setSymPoints(xp, yp, x, y, point);
 		if (sigma >= 0)
 		{
 			sigma += fa2 * (1 - yp);
@@ -945,16 +953,27 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 	}
 
 	/* second half */
-	/*for (xp = a, yp = 0, sigma = 2 * a2 + b2*(1 - 2 * a); a2*yp <= b2*xp; yp++)
+	for (xp = a, yp = 0, sigma = 2 * a2 + b2*(1 - 2 * a); a2*yp <= b2*xp; yp++)
 	{
-		setSymPoints(xp, yp, x, y, point);
+		point.x = xp + x;
+		point.y = yp + y;
+		drawPointNoTransform(point);
+
+		point.y = y - yp;
+		drawPointNoTransform(point);
+
+		point.x = x - xp;
+		drawPointNoTransform(point);
+
+		point.y = y + yp;
+		drawPointNoTransform(point);
 		if (sigma >= 0)
 		{
 			sigma += fb2 * (1 - xp);
 			xp--;
 		}
 		sigma += a2 * ((4 * yp) + 6);
-	}*/
+	}
 
 	pointSize = psize;
 }
@@ -1054,6 +1073,12 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	while (to >= 2 * 3.14159274)
 		to -= 2 * 3.14159274;
 
+	if (from < 0.00001f)
+		from = 0;
+
+	if (to < 0.00001f)
+		to = 0;
+
 	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
 	radius *= scaleFactor;
 	
@@ -1072,7 +1097,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	x = output.x;
 	y = output.y;
 
-	int xp, yp, p;
+	float xp, yp, p;
 	xp = 0;
 	yp = radius;
 	p = 3 - 2 * radius;
