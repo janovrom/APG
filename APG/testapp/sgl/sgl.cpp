@@ -786,11 +786,19 @@ void sglEllipse(float x, float y, float z, float a, float b) {
 	/* first half */
 	for (xp = 0, yp = b, sigma = 2 * b2 + a2*(1 - 2 * b); b2*xp <= a2*yp; xp++)
 	{
-		/*DrawPixel(xc + x, yc + y);
-		DrawPixel(xc - x, yc + y);
-		DrawPixel(xc + x, yc - y);
-		DrawPixel(xc - x, yc - y);*/
-		setSymPoints(xp, yp, x, y, point);
+		point.x = xp + x;
+		point.y = yp + y;
+		drawPointNoTransform(point);
+
+		point.y = y - yp;
+		drawPointNoTransform(point);
+
+		point.x = x - xp;
+		drawPointNoTransform(point);
+
+		point.y = y + yp;
+		drawPointNoTransform(point);
+		//setSymPoints(xp, yp, x, y, point);
 		if (sigma >= 0)
 		{
 			sigma += fa2 * (1 - yp);
@@ -800,16 +808,27 @@ void sglEllipse(float x, float y, float z, float a, float b) {
 	}
 
 	/* second half */
-	/*for (xp = a, yp = 0, sigma = 2 * a2 + b2*(1 - 2 * a); a2*yp <= b2*xp; yp++)
+	for (xp = a, yp = 0, sigma = 2 * a2 + b2*(1 - 2 * a); a2*yp <= b2*xp; yp++)
 	{
-		setSymPoints(xp, yp, x, y, point);
+		point.x = xp + x;
+		point.y = yp + y;
+		drawPointNoTransform(point);
+
+		point.y = y - yp;
+		drawPointNoTransform(point);
+
+		point.x = x - xp;
+		drawPointNoTransform(point);
+
+		point.y = y + yp;
+		drawPointNoTransform(point);
 		if (sigma >= 0)
 		{
 			sigma += fb2 * (1 - xp);
 			xp--;
 		}
 		sigma += a2 * ((4 * yp) + 6);
-	}*/
+	}
 
 	pointSize = psize;
 }
@@ -892,6 +911,12 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 
 	while (to >= 2 * 3.14159274)
 		to -= 2 * 3.14159274;
+
+	if (from < 0.00001f)
+		from = 0;
+
+	if (to < 0.00001f)
+		to = 0;
 
 	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
 	radius *= scaleFactor;
