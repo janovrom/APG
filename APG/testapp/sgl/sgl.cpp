@@ -195,8 +195,8 @@ void drawPointNoTransform (inputPoint4f& point) {
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = (int)(point.x);
-	y = (int)(point.y);
+	x = (int)round(point.x);
+	y = (int)round(point.y);
 
 	float *colorBuffer = cont->getColorBuffer();
 
@@ -234,8 +234,8 @@ void drawMeAPoint(inputPoint4f& point)
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = (int)(output.x);
-	y = (int)(output.y);
+	x = (int)round(output.x);
+	y = (int)round(output.y);
 
 	float *colorBuffer = cont->getColorBuffer();
 
@@ -781,7 +781,7 @@ void sglEllipse(float x, float y, float z, float a, float b) {
 	int a2 = a * a;
 	int b2 = b * b;
 	int fa2 = 4 * a2, fb2 = 4 * b2;
-	int xp, yp, sigma;
+	float xp, yp, sigma;
 
 	/* first half */
 	for (xp = 0, yp = b, sigma = 2 * b2 + a2*(1 - 2 * b); b2*xp <= a2*yp; xp++)
@@ -936,7 +936,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	x = output.x;
 	y = output.y;
 
-	int xp, yp, p;
+	float xp, yp, p;
 	xp = 0;
 	yp = radius;
 	p = 3 - 2 * radius;
