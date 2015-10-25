@@ -65,13 +65,34 @@ void copyMatrix(float* output, const float* input) {
 }
 
 void multiplyMatrix(float* left, const float* right) {
+	/*printf("\n");
+	for (int i = 0; i < 4; i++) {
+	printf("\n");
+	for (int j = i; j < 16; j += 4) {
+	printf("%f ", left[j]);
+	}
+	}
+	printf("\n");
+	for (int i = 0; i < 4; i++) {
+		printf("\n");
+		for (int j = i; j < 16; j += 4) {
+			printf("%f ", right[j]);
+		}
+	}*/
+	printf("\n");
 	float output[16];
 	for (int i = 0; i < 4; ++i) {
 		for (int j = 0; j < 4; ++j) {
-			output[i*4 + j] = dotVectors(left, right, i, j);
+			output[i*4 + j] = dotVectors(left, right, j, i);
 		}
 	}
 	copyMatrix(left, output);
+	/*for (int i = 0; i < 4; i++) {
+		printf("\n");
+		for (int j = i; j < 16; j += 4) {
+			printf("%f ", left[j]);
+		}
+	}*/
 }
 
 float multipliedMatrix[16];

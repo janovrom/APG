@@ -20,9 +20,9 @@
 #endif
 
 #ifdef TEST1
-#define TEST_1A
+//#define TEST_1A
 //#define TEST_1B
-//#define TEST_1C
+#define TEST_1C
 #endif
 
 #ifdef TEST2
@@ -834,7 +834,7 @@ void DrawTestScene1A(void)
   sglColor3f(1,1,1);
 
   for(float rr=0.4; rr<=4; rr+=0.4) {
-    sglArc(offsetx+0.05,offsety, 0,rr,0,M_PI/2);
+    sglArc(offsetx,offsety, 0,rr,0,M_PI/2);
     sglArc(offsetx+4,offsety,0,rr,M_PI*2/2,M_PI*3/2);
   }
 }
