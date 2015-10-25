@@ -77,8 +77,19 @@ int ContextWrapper::add(SglContext* c) {
 void sglInit(void) {
 	hasBegun = false;
 	viewportOffsetX = viewportOffsetY = viewportWidth = viewportHeight = 0;
-	float *mv = new float[16];
-	float *proj = new float[16];
+
+	float *mv;
+	float *proj;
+	try
+	{
+		mv = new float[16];
+		proj = new float[16];
+	}
+	catch (std::bad_alloc& ba)
+	{
+		setErrCode(sglEErrorCode::SGL_OUT_OF_MEMORY);
+		return;
+	}
 	copyMatrix(mv, identity);
 	copyMatrix(proj, identity);
 	modelViewStack.push(mv);
@@ -116,7 +127,10 @@ int sglCreateContext(int width, int height) {
 }
 
 void sglDestroyContext(int id) {
-	contextWrapper.clear(id);
+	if (!contextWrapper.clear(id))
+	{
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+	}
 }
 
 void sglSetContext(int id) {
@@ -859,7 +873,7 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 	point.a = 0;
 
 	inputPoint4f output;
-	transformThePoint(point, output);
+	transformThePoint(&point, output);
 	x = output.x;
 	y = output.y;
 	//setPixel(x, y, 1.0f, 0.0f, 0.0f);
@@ -913,6 +927,50 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 			stopY -= b2;
 		}
 	}
+}
+
+void sglEllipseSegmented(float x, float y, float z, float a, float b)
+{
+	if (contextWrapper.empty() || hasBegun) {
+		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		return;
+	}
+	int psize = pointSize;
+	pointSize = 1;
+
+	if (a < 0 || b < 0) {
+		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		return;
+	}
+	/*
+	inputPoint4f point;
+	point.x = x;
+	point.y = y;
+	point.z = 0;
+	point.w = 1;
+	point.r = colorVertexR;
+	point.g = colorVertexG;
+	point.b = colorVertexB;
+	point.a = 0;
+
+	inputPoint4f output;
+	transformThePoint(&point, output);
+	x = output.x;
+	y = output.y;
+	*/
+	sglBegin(SGL_LINE_LOOP);
+	float xd, yd;
+	int MAX = 40;
+	for (int i = 0; i < MAX; i++)
+	{
+		xd = x + a * std::cos((2 / MAX) * 3.14 * i);
+		yd = y + b * std::sin((2 / MAX) * 3.14 * i);
+
+		sglVertex2f(xd,yd);
+	}
+
+	sglEnd();
+
 }
 
 void sglEllipseFirst(float x, float y, float z, float a, float b) {
@@ -1003,11 +1061,14 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 }
 
 void sglEllipse(float x, float y, float z, float a, float b) {
+	sglEllipseSegmented(x, y, z, a, b);
+	/*
 	#ifdef ELLIPSE_SECOND
 		sglEllipseSecond(x, y, z, a, b);
 	#else
 		sglEllipseFirst(x, y, z, a, b);
 	#endif
+	*/
 }
 
 void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float radius, float from, float to) {
