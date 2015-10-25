@@ -859,7 +859,7 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 	point.a = 0;
 
 	inputPoint4f output;
-	transformThePoint(point, output);
+	transformThePoint(&point, output);
 	x = output.x;
 	y = output.y;
 	//setPixel(x, y, 1.0f, 0.0f, 0.0f);
