@@ -1061,14 +1061,14 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 }
 
 void sglEllipse(float x, float y, float z, float a, float b) {
-	sglEllipseSegmented(x, y, z, a, b);
-	/*
+	//sglEllipseSegmented(x, y, z, a, b);
+	
 	#ifdef ELLIPSE_SECOND
 		sglEllipseSecond(x, y, z, a, b);
 	#else
 		sglEllipseFirst(x, y, z, a, b);
 	#endif
-	*/
+	
 }
 
 void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float radius, float from, float to) {

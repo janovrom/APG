@@ -490,8 +490,16 @@ void branch(int depth,float rot)
   sglPushMatrix();
   for(int i=0; i<3; i++) {
     sglScale(0.87,0.87,1);
-    sglRotate2D(rot*0.15,0,1);
     sglTranslate(0,2,0);
+		sglRotate2D(rot*0.15, 0, 1);
+
+	/*
+	sglPointSize(5);
+	sglBegin(SGL_POINTS);
+	sglVertex2f(0.0f,0.0f);
+	sglEnd();
+	*/
+
     box();
   }
   if(depth<3) {
