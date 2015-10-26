@@ -18,7 +18,7 @@ std::stack<float *> modelViewStack;
 std::stack<float *> projectionStack;
 
 // identity matrix for easy copying
-float identity[16] ={	1.0f, 0.0f, 0.0f, 0.0f,
+float identityMatrix[16] ={	1.0f, 0.0f, 0.0f, 0.0f,
 						0.0f, 1.0f, 0.0f, 0.0f, 
 						0.0f, 0.0f, 1.0f, 0.0f, 
 						0.0f, 0.0f, 0.0f, 1.0f};
@@ -303,10 +303,16 @@ public:
 
 struct ContextWrapper {
 public:
-	int activeContext = -1;
+	int activeContext;
 	SglContext* contexts[MIN_CONTEXTS];
-	int length = MIN_CONTEXTS;
-	int count = 0;
+	int length;
+	int count;
+
+	ContextWrapper() {
+		activeContext = -1;
+		length = MIN_CONTEXTS;
+		count = 0;
+	}
 
 	~ContextWrapper() {
 		clear();
@@ -316,13 +322,13 @@ public:
 		if (id < length)
 			return contexts[id];
 		else
-			return nullptr;
+			return NULL;
 	}
 
 	void clear() {
 		for (int i = 0; i < length; ++i) {
 			delete contexts[i];
-			contexts[i] = nullptr;
+			contexts[i] = NULL;
 		}
 		count = 0;
 	}
@@ -349,7 +355,7 @@ public:
 
 	int findFirstEmpty() {
 		for (int i = 0; i < length; ++i) {
-			if (contexts[i] == nullptr)
+			if (contexts[i] == NULL)
 				return i;
 		}
 		return -1;
