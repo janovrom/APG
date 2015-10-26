@@ -9,7 +9,8 @@
 #include "sglcontext.h"
 
 //#define LINE_NAIVE
-#define ELLIPSE_FIRST
+// decides which ellipse algoritm should be used
+#define ELLIPSE
 
 
 void setPixel(float x0, float y0, float r, float g, float b);
@@ -206,14 +207,21 @@ void sglBegin(sglEElementType mode)
 }
 
 /*
-Transformations of points will be applied here in future, now it just returns input.
+Transforms input point - model, view, projection and viewport.
+Input point is preserved and transformation is returned in its copy.
+@param point input point to transform
+@param output where transformed point is stored
 */
 void transformThePoint(inputPoint4f* point, inputPoint4f& output)
 {
+	// test if between sglBegin and sglEnd
 	if (hasBegun) {
+		// for convenience, matrices are multiplied only once in sglEnd
 		multiplyMatrixVector(multipliedMatrix, point, output);
 	}
 	else {
+		// there is no sglBegin nor sglEnd, we can't be sure, where new 
+		// transformation will appear so it needs to be done every time
 		inputPoint4f tmp(*point);
 		multiplyMatrixVector(modelViewStack.top(), point, output);
 		multiplyMatrixVector(projectionStack.top(), &output, tmp);
@@ -221,7 +229,7 @@ void transformThePoint(inputPoint4f* point, inputPoint4f& output)
 	}
 	// there should be perspective divide
 }
-
+// HERE UNUSED CODE STARTS
 void transformScaleAndRotation(inputPoint4f* point, inputPoint4f& output) {
 	float *mat = modelViewStack.top();
 	output.x = mat[0] * point->x + mat[4] * point->y + mat[8] * point->z;
@@ -320,6 +328,7 @@ void drawPointRotatedAndScaled(inputPoint4f* point)
 	}
 
 }
+// HERE UNUSED CODE ENDS
 
 void drawMeAPoint(inputPoint4f* point) 
 {
@@ -772,6 +781,15 @@ void sglVertex2f(float x, float y)
 	queue4f.push(point);
 }
 
+/**
+Used in Bresenham's algorithm for drawing circle. One point is copied on 8 
+different places.
+@param x untranslated position of point
+@param y untranslated position of point
+@param xs center of circle
+@param ys center of circle
+@param point input point with stored colors
+*/
 void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
 	point.x = x + xs;
 	point.y = y + ys;
@@ -808,6 +826,7 @@ void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
 	setPixel(point.x, point.y, point.r, point.g, point.b);
 }
 
+// HERE UNUSED CODE STARTS
 void setSymPointsModified(int x, int y, int xs, int ys, inputPoint4f& point) {
 	point.x = x + xs;
 	point.y = y + ys;
@@ -836,6 +855,7 @@ void setSymPointsModified(int x, int y, int xs, int ys, inputPoint4f& point) {
 	drawPointNoTransform(point);
 	*/
 }
+// HERE UNUSED CODE ENDS
 
 void setPixel(float x0, float y0, float r, float g, float b)
 {
@@ -872,11 +892,6 @@ void sglCircle(float x, float y, float z, float radius) {
 		return;
 	}
 
-	// there should be perspective divide and viewport
-	//x = (x + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
-	//y = (y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
-	//radius = (radius + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
-
 	float scaleFactor = sqrt(multipliedMatrix[0] * multipliedMatrix[5] - multipliedMatrix[1] * multipliedMatrix[4]);
 	radius *= scaleFactor;
 
@@ -894,7 +909,7 @@ void sglCircle(float x, float y, float z, float radius) {
 	transformThePoint(&point, output);
 	x = output.x;
 	y = output.y;
-
+	// Bresenham's algorithm for drawing circle
 	int xp, yp, p;
 	xp = 0;
 	yp = radius;
@@ -1042,6 +1057,15 @@ void sglEllipseSegmented(float x, float y, float z, float a, float b)
 
 }
 
+/**
+Bresenham's algorithm for drawing ellipses.
+@param x untranslated position of point
+@param y untranslated position of point
+@param xs center of circle
+@param ys center of circle
+@param a horizontal squish
+@param b vertical squish
+*/
 void sglEllipseFirst(float x, float y, float z, float a, float b) {
 	invertedForObject = false;
 	if (contextWrapper.empty() || hasBegun) {
@@ -1138,16 +1162,25 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 }
 
 void sglEllipse(float x, float y, float z, float a, float b) {
-	sglEllipseSegmented(x, y, z, a, b);
-	
-	/*#ifdef ELLIPSE_SECOND
+	#ifdef ELLIPSE
+		sglEllipseSegmented(x, y, z, a, b);
+	#elif ELLIPSE_SECOND
 		sglEllipseSecond(x, y, z, a, b);
 	#else
 		sglEllipseFirst(x, y, z, a, b);
-	#endif*/
+	#endif
 	
 }
 
+/**
+Bresenham's algorithm for drawing circle, though limited by minimal and maximal angle.
+@param x untranslated position of point
+@param y untranslated position of point
+@param xs center of arc
+@param ys center of arc
+@param from Minimum required angle for arc.
+@param to Maximum angle for arc.
+*/
 void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f *point, float radius, float from, float to) {
 	point->x = x + xs;
 	point->y = y + ys;
@@ -1155,36 +1188,28 @@ void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f *point, float 
 	if (y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointRotatedAndScaled(point);
-		//setPixel(point->x, point->y, point->r, point->g, point->b);
-		//drawPointNoTransform(point);
+		setPixel(point->x, point->y, point->r, point->g, point->b);
 
 	point->x = xs - x;
 	angle = acos(-x / radius);
 	if (y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointRotatedAndScaled(point);
-		//setPixel(point->x, point->y, point->r, point->g, point->b);
-		//drawPointNoTransform(point);
+		setPixel(point->x, point->y, point->r, point->g, point->b);
 
 	point->y = ys - y;
 	angle = acos(-x / radius);
 	if (-y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointRotatedAndScaled(point);
-		//setPixel(point->x, point->y, point->r, point->g, point->b);
-		//drawPointNoTransform(point);
+		setPixel(point->x, point->y, point->r, point->g, point->b);
 
 	point->x = x + xs;
 	angle = acos(x / radius);
 	if (-y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointRotatedAndScaled(point);
-		//setPixel(point->x, point->y, point->r, point->g, point->b);
-		//drawPointNoTransform(point);
+		setPixel(point->x, point->y, point->r, point->g, point->b);
 
 	point->x = y + xs;
 	point->y = x + ys;
@@ -1192,36 +1217,28 @@ void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f *point, float 
 	if (x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointRotatedAndScaled(point);
-		//setPixel(point->x, point->y, point->r, point->g, point->b);
-		//drawPointNoTransform(point);
+		setPixel(point->x, point->y, point->r, point->g, point->b);
 
 	point->x = xs - y;
 	angle = acos(-y / radius);
 	if (x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointRotatedAndScaled(point);
-		//setPixel(point->x, point->y, point->r, point->g, point->b);
-		//drawPointNoTransform(point);
+		setPixel(point->x, point->y, point->r, point->g, point->b);
 
 	point->y = ys - x;
 	angle = acos(-y / radius);
 	if (-x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointRotatedAndScaled(point);
-		//setPixel(point->x, point->y, point->r, point->g, point->b);
-		//drawPointNoTransform(point);
+		setPixel(point->x, point->y, point->r, point->g, point->b);
 
 	point->x = y + xs;
 	angle = acos(y / radius);
 	if (-x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		drawPointRotatedAndScaled(point);
-		//setPixel(point->x, point->y, point->r, point->g, point->b);
-		//drawPointNoTransform(point);
+		setPixel(point->x, point->y, point->r, point->g, point->b);
 }
 
 void sglArc(float x, float y, float z, float radius, float from, float to) {
@@ -1318,6 +1335,11 @@ void sglMatrixMode( sglEMatrixMode mode ) {
 	matrixMode = mode;
 }
 
+/**
+Copies matrix and returns its deep copy.
+@param matrix matrix 4x4 to be copied
+@return copy of 4x4 matrix
+*/
 float* duplicateMatrix(const float* matrix) {
 	float* ret = new float[16];
 	for (int i = 0; i < 16; ++i) {
