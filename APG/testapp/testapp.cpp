@@ -21,8 +21,8 @@
 
 #ifdef TEST1
 //#define TEST_1A
-//#define TEST_1B
-#define TEST_1C
+#define TEST_1B
+//#define TEST_1C
 #endif
 
 #ifdef TEST2
@@ -616,7 +616,8 @@ void DrawTestScene1B(void)
   sglArc(0,0,0,1,0,4);
 
   // ELLIPSE
-  sglLoadIdentity(); sglTranslate(0,-4,0);
+  sglLoadIdentity(); 
+  sglTranslate(0,-4,0);
 
   sglColor3f(1,1,1);
   sglEllipse(0,0,0,1.5,0.7);
@@ -631,7 +632,8 @@ void DrawTestScene1B(void)
   sglEllipse(0,0,0,1.5,0.7);
 
   sglColor3f(0,0,1);
-  sglLoadIdentity(); sglTranslate(0,-4,0);
+  sglLoadIdentity(); 
+  sglTranslate(0,-4,0);
   sglTranslate(3,0,0);
   sglScale(0.5,2,1);
   sglEllipse(0,0,0,1.5,0.7);

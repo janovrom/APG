@@ -9,7 +9,7 @@
 #include "sglcontext.h"
 
 //#define LINE_NAIVE
-#define ELLIPSE_SECOND
+#define ELLIPSE_FIRST
 
 
 void setPixel(float x0, float y0, float r, float g, float b);
@@ -196,16 +196,44 @@ Transformations of points will be applied here in future, now it just returns in
 */
 void transformThePoint(inputPoint4f* point, inputPoint4f& output)
 {
-	// careful this is only shallow copy, though for floats it is sufficient
+	if (hasBegun) {
+		multiplyMatrixVector(multipliedMatrix, point, output);
+	}
+	else {
+		inputPoint4f tmp(*point);
+		multiplyMatrixVector(modelViewStack.top(), point, output);
+		multiplyMatrixVector(projectionStack.top(), &output, tmp);
+		multiplyMatrixVector(viewportMatrix, &tmp, output);
+	}
+	// there should be perspective divide
+}
+
+void transformScaleAndRotation(inputPoint4f* point, inputPoint4f& output) {
+	float *mat = modelViewStack.top();
+	output.x = mat[0] * point->x + mat[4] * point->y + mat[8] * point->z;
+	output.y = mat[1] * point->x + mat[5] * point->y + mat[9] * point->z;
+	output.z = mat[2] * point->x + mat[6] * point->y + mat[10] * point->z;
+}
+
+void invertTransformPoint(inputPoint4f* point, inputPoint4f& output) {
+	if (!invertedForObject) {
+		invertMatrix(viewportMatrix, inversedViewportMatrix);
+		invertMatrix(projectionStack.top(), inversedProjectionMatrix);
+		invertedForObject = true;
+	}
+	inputPoint4f tmp(*point);
+	inputPoint4f tmp2(*point);
+	multiplyMatrixVector(inversedViewportMatrix, point, tmp);
+	multiplyMatrixVector(inversedProjectionMatrix, &tmp, tmp2);
+	transformThePoint(&tmp2, output);
+}
+
+void transformPointModelView(inputPoint4f* point, inputPoint4f& output)
+{
+	multiplyMatrixVector(modelViewStack.top(), point, output);
 	//inputPoint4f tmp (point);
 	//multiplyMatrixVector(modelViewStack.top(), point, tmp);
 	//multiplyMatrixVector(projectionStack.top(), tmp, output);
-
-	multiplyMatrixVector(viewportMatrix, point, output);
-
-	// there should be perspective divide and viewport
-	//output.x = (output.x + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
-	//output.y = (output.y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
 }
 
 void drawPointNoTransform (inputPoint4f& point) {
@@ -237,6 +265,46 @@ void drawPointNoTransform (inputPoint4f& point) {
 }
 		}
 	}
+}
+
+void drawPointRotatedAndScaled(inputPoint4f* point)
+{
+	inputPoint4f output;
+	output.r = point->r;
+	output.g = point->g;
+	output.b = point->b;
+	output.a = point->a;
+	transformScaleAndRotation(point, output);
+
+	int W, H, x, y;
+
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
+	W = cont->getWidth();
+	H = cont->getHeight();
+	x = (int)round(output.x);
+	y = (int)round(output.y);
+
+	float *colorBuffer = cont->getColorBuffer();
+
+	int offset;
+
+	int size = (int)((pointSize - 1) / 2);
+	int sizeCorrection = 1 - (int)pointSize % 2;
+
+	for (int i = x - size; i <= x + (size + sizeCorrection); i++)
+	{
+		for (int j = y - size; j <= y + (size + sizeCorrection); j++)
+		{
+			if (i >= 0 && i < W && j >= 0 && j < H)
+			{
+				offset = j*W * 3 + i * 3;
+				*(colorBuffer + offset) = output.r;
+				*(colorBuffer + offset + 1) = output.g;
+				*(colorBuffer + offset + 2) = output.b;
+			}
+		}
+	}
+
 }
 
 void drawMeAPoint(inputPoint4f* point) 
@@ -610,15 +678,18 @@ void sglEnd(void)
 {
 	if (!hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
 
-	copyMatrix(viewportMatrix, identity);
-	viewportMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
-	viewportMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
-	viewportMatrix[10] = 0.5f;
-	viewportMatrix[12] = (viewportWidth / 2.0f) + viewportOffsetX;
-	viewportMatrix[13] = (viewportHeight / 2.0f) + viewportOffsetY;
-	viewportMatrix[14] = 0.5f;
-	multiplyMatrix(viewportMatrix, projectionStack.top());
-	multiplyMatrix(viewportMatrix, modelViewStack.top());
+	copyMatrix(multipliedMatrix, identity);
+	multipliedMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
+	multipliedMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
+	multipliedMatrix[10] = 0.5f;
+	multipliedMatrix[12] = (viewportWidth / 2.0f) + viewportOffsetX;
+	multipliedMatrix[13] = (viewportHeight / 2.0f) + viewportOffsetY;
+	multipliedMatrix[14] = 0.5f;
+	copyMatrix(viewportMatrix, multipliedMatrix);
+	multiplyMatrix(multipliedMatrix, projectionStack.top());
+	multiplyMatrix(multipliedMatrix, modelViewStack.top());
+
+	invertMatrix(viewportMatrix, inversedViewportMatrix);
 
 	switch (drawingMethod)
 	{
@@ -792,7 +863,7 @@ void sglCircle(float x, float y, float z, float radius) {
 	//y = (y + 1) * (viewportHeight / 2.0f) + viewportOffsetY;
 	//radius = (radius + 1) * (viewportWidth / 2.0f) + viewportOffsetX;
 
-	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
+	float scaleFactor = sqrt(multipliedMatrix[0] * multipliedMatrix[5] - multipliedMatrix[1] * multipliedMatrix[4]);
 	radius *= scaleFactor;
 
 	inputPoint4f point;
@@ -844,7 +915,7 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 		return;
 	}
 
-	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
+	float scaleFactor = sqrt(multipliedMatrix[0] * multipliedMatrix[5] - multipliedMatrix[1] * multipliedMatrix[4]);
 	a *= scaleFactor;
 	b *= scaleFactor;
 
@@ -916,6 +987,7 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 }
 
 void sglEllipseFirst(float x, float y, float z, float a, float b) {
+	invertedForObject = false;
 	if (contextWrapper.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 		return;
@@ -928,7 +1000,7 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 		return;
 	}
 
-	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
+	float scaleFactor = sqrt(multipliedMatrix[0] * multipliedMatrix[5] - multipliedMatrix[1] * multipliedMatrix[4]);
 	a *= scaleFactor;
 	b *= scaleFactor;
 
@@ -957,17 +1029,20 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 	{
 		point.x = xp + x;
 		point.y = yp + y;
-		drawPointNoTransform(point);
+		drawPointRotatedAndScaled(&point);
+		//drawPointNoTransform(point);
 
 		point.y = y - yp;
-		drawPointNoTransform(point);
+		drawPointRotatedAndScaled(&point);
+		//drawPointNoTransform(point);
 
 		point.x = x - xp;
-		drawPointNoTransform(point);
+		drawPointRotatedAndScaled(&point);
+		//drawPointNoTransform(point);
 
 		point.y = y + yp;
-		drawPointNoTransform(point);
-		//setSymPoints(xp, yp, x, y, point);
+		drawPointRotatedAndScaled(&point);
+		//drawPointNoTransform(point);
 		if (sigma >= 0)
 		{
 			sigma += fa2 * (1 - yp);
@@ -981,16 +1056,20 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 	{
 		point.x = xp + x;
 		point.y = yp + y;
-		drawPointNoTransform(point);
+		drawPointRotatedAndScaled(&point);
+		//drawPointNoTransform(point);
 
 		point.y = y - yp;
-		drawPointNoTransform(point);
+		drawPointRotatedAndScaled(&point);
+		//drawPointNoTransform(point);
 
 		point.x = x - xp;
-		drawPointNoTransform(point);
+		drawPointRotatedAndScaled(&point);
+		//drawPointNoTransform(point);
 
 		point.y = y + yp;
-		drawPointNoTransform(point);
+		drawPointRotatedAndScaled(&point);
+		//drawPointNoTransform(point);
 		if (sigma >= 0)
 		{
 			sigma += fb2 * (1 - xp);
@@ -1010,75 +1089,84 @@ void sglEllipse(float x, float y, float z, float a, float b) {
 	#endif
 }
 
-void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f& point, float radius, float from, float to) {
-	point.x = x + xs;
-	point.y = y + ys;
+void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f *point, float radius, float from, float to) {
+	point->x = x + xs;
+	point->y = y + ys;
 	float angle = acos(x / radius);
 	if (y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point.x, point.y, point.r, point.g, point.b);
+		drawPointRotatedAndScaled(point);
+		//setPixel(point->x, point->y, point->r, point->g, point->b);
 		//drawPointNoTransform(point);
 
-	point.x = xs - x;
+	point->x = xs - x;
 	angle = acos(-x / radius);
 	if (y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point.x, point.y, point.r, point.g, point.b);
+		drawPointRotatedAndScaled(point);
+		//setPixel(point->x, point->y, point->r, point->g, point->b);
 		//drawPointNoTransform(point);
 
-	point.y = ys - y;
+	point->y = ys - y;
 	angle = acos(-x / radius);
 	if (-y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point.x, point.y, point.r, point.g, point.b);
+		drawPointRotatedAndScaled(point);
+		//setPixel(point->x, point->y, point->r, point->g, point->b);
 		//drawPointNoTransform(point);
 
-	point.x = x + xs;
+	point->x = x + xs;
 	angle = acos(x / radius);
 	if (-y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point.x, point.y, point.r, point.g, point.b);
+		drawPointRotatedAndScaled(point);
+		//setPixel(point->x, point->y, point->r, point->g, point->b);
 		//drawPointNoTransform(point);
 
-	point.x = y + xs;
-	point.y = x + ys;
+	point->x = y + xs;
+	point->y = x + ys;
 	angle = acos(y / radius);
 	if (x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point.x, point.y, point.r, point.g, point.b);
+		drawPointRotatedAndScaled(point);
+		//setPixel(point->x, point->y, point->r, point->g, point->b);
 		//drawPointNoTransform(point);
 
-	point.x = xs - y;
+	point->x = xs - y;
 	angle = acos(-y / radius);
 	if (x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point.x, point.y, point.r, point.g, point.b);
+		drawPointRotatedAndScaled(point);
+		//setPixel(point->x, point->y, point->r, point->g, point->b);
 		//drawPointNoTransform(point);
 
-	point.y = ys - x;
+	point->y = ys - x;
 	angle = acos(-y / radius);
 	if (-x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point.x, point.y, point.r, point.g, point.b);
+		drawPointRotatedAndScaled(point);
+		//setPixel(point->x, point->y, point->r, point->g, point->b);
 		//drawPointNoTransform(point);
 
-	point.x = y + xs;
+	point->x = y + xs;
 	angle = acos(y / radius);
 	if (-x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point.x, point.y, point.r, point.g, point.b);
+		drawPointRotatedAndScaled(point);
+		//setPixel(point->x, point->y, point->r, point->g, point->b);
 		//drawPointNoTransform(point);
 }
 
 void sglArc(float x, float y, float z, float radius, float from, float to) {
+	invertedForObject = false;
 	if (hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
 		return;
@@ -1103,7 +1191,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	if (to < 0.00001f)
 		to = 0;
 
-	float scaleFactor = sqrt(viewportMatrix[0] * viewportMatrix[5] - viewportMatrix[1] * viewportMatrix[4]);
+	float scaleFactor = sqrt(multipliedMatrix[0] * multipliedMatrix[5] - multipliedMatrix[1] * multipliedMatrix[4]);
 	radius *= scaleFactor;
 	
 	inputPoint4f point;
@@ -1127,7 +1215,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	p = 3 - 2 * radius;
 	//printf("drawing from %f to %f at [%f, %f] \n",from, to, x, y);
 	while (xp < yp) {
-		setSymPointsLimit(xp, yp, x, y, point, radius, from, to);
+		setSymPointsLimit(xp, yp, x, y, &point, radius, from, to);
 		if (p < 0) {
 			p = p + 4 * xp + 6;
 		}
@@ -1138,7 +1226,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 		++xp;
 	}
 	if (xp == yp)
-		setSymPointsLimit(xp, yp, x, y, point, radius, from, to);
+		setSymPointsLimit(xp, yp, x, y, &point, radius, from, to);
 
 	pointSize = psize;
 }
