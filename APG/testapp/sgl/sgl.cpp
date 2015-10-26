@@ -65,7 +65,7 @@ const char* sglGetErrorString(sglEErrorCode error)
 int ContextWrapper::add(SglContext* c) {
 	int i = findFirstEmpty();
 	if (i == -1) {
-		setErrCode(sglEErrorCode::SGL_OUT_OF_RESOURCES);
+		setErrCode(SGL_OUT_OF_RESOURCES);
 		return -1;
 	}
 	else {
@@ -89,7 +89,7 @@ void sglInit(void) {
 	}
 	catch (std::bad_alloc& ba)
 	{
-		setErrCode(sglEErrorCode::SGL_OUT_OF_MEMORY);
+		setErrCode(SGL_OUT_OF_MEMORY);
 		return;
 	}
 	// init stacks with identity matrices
@@ -123,7 +123,7 @@ void sglFinish(void) {
 int sglCreateContext(int width, int height) {
 	SglContext* c = new SglContext(width, height);
 	if (!c) {
-		setErrCode(sglEErrorCode::SGL_OUT_OF_MEMORY);
+		setErrCode(SGL_OUT_OF_MEMORY);
 		return -2;
 	}
 	
@@ -134,7 +134,7 @@ int sglCreateContext(int width, int height) {
 void sglDestroyContext(int id) {
 	if (!contextWrapper.clear(id))
 	{
-		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		setErrCode(SGL_INVALID_VALUE);
 	}
 }
 
@@ -142,13 +142,13 @@ void sglSetContext(int id) {
 	if (id < contextWrapper.size() && id >= 0)
 		contextWrapper.activeContext = id;
 	else
-		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		setErrCode(SGL_INVALID_VALUE);
 }
 
 int sglGetContext(void) {
 	if (contextWrapper.empty())
 	{
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return -1;
 	}
 	return contextWrapper.activeContext;
@@ -167,7 +167,7 @@ float *sglGetColorBufferPointer(void) {
 
 void sglClearColor (float r, float g, float b, float alpha) {
 	if (contextWrapper.empty() || hasBegun) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 	else {
@@ -179,7 +179,7 @@ void sglClearColor (float r, float g, float b, float alpha) {
 
 void sglClear(unsigned what) {
 	if (contextWrapper.empty() || hasBegun) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 
@@ -190,7 +190,7 @@ void sglClear(unsigned what) {
 			contextWrapper[contextWrapper.activeContext]->clearDepth();
 	}
 	else {
-			setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+			setErrCode(SGL_INVALID_VALUE);
 	}
 }
 
@@ -198,12 +198,12 @@ void sglBegin(sglEElementType mode)
 {
 	if (hasBegun) 
 	{ 
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return; 
 	}
 	if (mode <= 0 || mode >= sglEElementType::SGL_LAST_ELEMENT_TYPE) 
 	{ 
-		setErrCode(sglEErrorCode::SGL_INVALID_ENUM); 
+		setErrCode(SGL_INVALID_ENUM); 
 		return; 
 	}
 	hasBegun = true;
@@ -732,7 +732,7 @@ void drawLineLoop()
 
 void sglEnd(void) 
 {
-	if (!hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
+	if (!hasBegun) { setErrCode(SGL_INVALID_OPERATION); return; }
 
 	// so there is no need to compute multiplication every time, it is computed once here
 	copyMatrix(multipliedMatrix, identity);
@@ -919,14 +919,14 @@ void setPixel(float x0, float y0, float r, float g, float b)
 
 void sglCircle(float x, float y, float z, float radius) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); 
+		setErrCode(SGL_INVALID_OPERATION); 
 		return; 
 	}
 	int psize = pointSize;
 	pointSize = 1;
 
 	if (radius < 0) {
-		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		setErrCode(SGL_INVALID_VALUE);
 		return;
 	}
 
@@ -974,14 +974,14 @@ Second algoritm to draw ellipses.
 */
 void sglEllipseSecond(float x, float y, float z, float a, float b) {
 	if (contextWrapper.empty() || hasBegun) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 	int psize = pointSize;
 	pointSize = 1;
 
 	if (a < 0 || b < 0) {
-		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		setErrCode(SGL_INVALID_VALUE);
 		return;
 	}
 
@@ -1059,14 +1059,14 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 void sglEllipseSegmented(float x, float y, float z, float a, float b)
 {
 	if (contextWrapper.empty() || hasBegun) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 	int psize = pointSize;
 	pointSize = 1;
 
 	if (a < 0 || b < 0) {
-		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		setErrCode(SGL_INVALID_VALUE);
 		return;
 	}
 	/*
@@ -1110,14 +1110,14 @@ Bresenham's algorithm for drawing ellipses.
 void sglEllipseFirst(float x, float y, float z, float a, float b) {
 	invertedForObject = false;
 	if (contextWrapper.empty() || hasBegun) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 	int psize = pointSize;
 	pointSize = 1;
 
 	if (a < 0 || b < 0) {
-		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		setErrCode(SGL_INVALID_VALUE);
 		return;
 	}
 
@@ -1285,14 +1285,14 @@ void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f *point, float 
 void sglArc(float x, float y, float z, float radius, float from, float to) {
 	invertedForObject = false;
 	if (hasBegun) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 	int psize = pointSize;
 	pointSize = 1;
 
 	if (radius < 0) {
-		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		setErrCode(SGL_INVALID_VALUE);
 		return;
 	}
 	sglBegin(SGL_LINE_STRIP);
@@ -1366,7 +1366,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 
 void sglMatrixMode( sglEMatrixMode mode ) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 	if (mode != SGL_MODELVIEW && mode != SGL_PROJECTION) {
@@ -1391,7 +1391,7 @@ float* duplicateMatrix(const float* matrix) {
 
 void sglPushMatrix(void) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 
@@ -1409,7 +1409,7 @@ void sglPushMatrix(void) {
 
 void sglPopMatrix(void) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 
@@ -1439,7 +1439,7 @@ void sglPopMatrix(void) {
 
 void sglLoadIdentity(void) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 
@@ -1457,7 +1457,7 @@ void sglLoadIdentity(void) {
 
 void sglLoadMatrix(const float *matrix) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 
@@ -1475,7 +1475,7 @@ void sglLoadMatrix(const float *matrix) {
 
 void sglMultMatrix(const float *matrix) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 
@@ -1493,7 +1493,7 @@ void sglMultMatrix(const float *matrix) {
 
 void sglTranslate(float x, float y, float z) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 	float translate[16];
@@ -1515,7 +1515,7 @@ void sglTranslate(float x, float y, float z) {
 
 void sglScale(float scalex, float scaley, float scalez) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 	float scale[16];
@@ -1537,7 +1537,7 @@ void sglScale(float scalex, float scaley, float scalez) {
 
 void sglRotate2D(float angle, float centerx, float centery) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 
@@ -1571,7 +1571,7 @@ void sglRotate2D(float angle, float centerx, float centery) {
 
 void sglRotateY(float angle) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 
@@ -1594,7 +1594,7 @@ void sglRotateY(float angle) {
 
 void sglOrtho(float left, float right, float bottom, float top, float near, float far) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 
@@ -1626,11 +1626,11 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
 
 void sglFrustum(float left, float right, float bottom, float top, float near, float far) {
 	if (near < 0 || far < 0) {
-		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		setErrCode(SGL_INVALID_VALUE);
 		return;
 	}
 	else if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 
@@ -1664,10 +1664,10 @@ void sglFrustum(float left, float right, float bottom, float top, float near, fl
 
 void sglViewport(int x, int y, int width, int height) {
 	if (width < 0 || height < 0) {
-		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		setErrCode(SGL_INVALID_VALUE);
 	}
 	else if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 	}
 	else {
 		viewportOffsetX = x;
@@ -1694,13 +1694,13 @@ void sglPointSize(float size)
 {
 	if (size <= 0) 
 	{
-		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
+		setErrCode(SGL_INVALID_VALUE);
 		return;
 	}
 
 	if (hasBegun || contextWrapper.empty() ) 
 	{
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); 
+		setErrCode(SGL_INVALID_OPERATION); 
 		return;
 	}
 	pointSize = size;
@@ -1708,7 +1708,7 @@ void sglPointSize(float size)
 
 void sglEnable(sglEEnableFlags cap) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 	switch (cap)
@@ -1717,14 +1717,14 @@ void sglEnable(sglEEnableFlags cap) {
 		testDepth = true;
 		break;
 	default:
-		setErrCode(sglEErrorCode::SGL_INVALID_ENUM);
+		setErrCode(SGL_INVALID_ENUM);
 		break;
 	}
 }
 
 void sglDisable(sglEEnableFlags cap) {
 	if (hasBegun || contextWrapper.empty()) {
-		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
+		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
 	switch (cap)
@@ -1733,7 +1733,7 @@ void sglDisable(sglEEnableFlags cap) {
 		testDepth = false;
 		break;
 	default:
-		setErrCode(sglEErrorCode::SGL_INVALID_ENUM);
+		setErrCode(SGL_INVALID_ENUM);
 		break;
 	}
 }
