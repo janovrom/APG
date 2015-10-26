@@ -76,6 +76,7 @@ int ContextWrapper::add(SglContext* c) {
 }
 
 void sglInit(void) {
+	// init values to default
 	hasBegun = false;
 	viewportOffsetX = viewportOffsetY = viewportWidth = viewportHeight = 0;
 
@@ -91,6 +92,7 @@ void sglInit(void) {
 		setErrCode(sglEErrorCode::SGL_OUT_OF_MEMORY);
 		return;
 	}
+	// init stacks with identity matrices
 	copyMatrix(mv, identity);
 	copyMatrix(proj, identity);
 	modelViewStack.push(mv);
@@ -98,10 +100,12 @@ void sglInit(void) {
 }
 
 void sglFinish(void) {
+	// reset values and clear
 	contextWrapper.clear();
 	contextWrapper.activeContext = -1;
 	hasBegun = false;
 	viewportOffsetX = viewportOffsetY = viewportWidth = viewportHeight = 0;
+	// do some memory management on stacks
 	for (;!modelViewStack.empty();) {
 		delete[] modelViewStack.top();
 		modelViewStack.pop();
@@ -229,6 +233,7 @@ void transformThePoint(inputPoint4f* point, inputPoint4f& output)
 	}
 	// there should be perspective divide
 }
+
 // HERE UNUSED CODE STARTS
 void transformScaleAndRotation(inputPoint4f* point, inputPoint4f& output) {
 	float *mat = modelViewStack.top();
@@ -701,7 +706,9 @@ void sglEnd(void)
 {
 	if (!hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
 
+	// so there is no need to compute multiplication every time, it is computed once here
 	copyMatrix(multipliedMatrix, identity);
+	// creates viewport (and there should be perspective divide)
 	multipliedMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
 	multipliedMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
 	multipliedMatrix[10] = 0.5f;
