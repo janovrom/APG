@@ -12,6 +12,7 @@
 // decides which ellipse algoritm should be used
 #define ELLIPSE
 
+using namespace std;
 
 void setPixel(float x0, float y0, float r, float g, float b);
 /// Current error code.
@@ -92,9 +93,9 @@ void sglInit(void) {
 		setErrCode(sglEErrorCode::SGL_OUT_OF_MEMORY);
 		return;
 	}
-	// init stacks with identity matrices
-	copyMatrix(mv, identity);
-	copyMatrix(proj, identity);
+	// init stacks with identityMatrix matrices
+	copyMatrix(mv, identityMatrix);
+	copyMatrix(proj, identityMatrix);
 	modelViewStack.push(mv);
 	projectionStack.push(proj);
 }
@@ -735,7 +736,7 @@ void sglEnd(void)
 	if (!hasBegun) { setErrCode(sglEErrorCode::SGL_INVALID_OPERATION); return; }
 
 	// so there is no need to compute multiplication every time, it is computed once here
-	copyMatrix(multipliedMatrix, identity);
+	copyMatrix(multipliedMatrix, identityMatrix);
 	// creates viewport (and there should be perspective divide)
 	multipliedMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
 	multipliedMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
@@ -1445,10 +1446,10 @@ void sglLoadIdentity(void) {
 
 	switch (matrixMode) {
 	case SGL_MODELVIEW:
-		copyMatrix(modelViewStack.top(), identity);
+		copyMatrix(modelViewStack.top(), identityMatrix);
 		break;
 	case SGL_PROJECTION:
-		copyMatrix(projectionStack.top(), identity);
+		copyMatrix(projectionStack.top(), identityMatrix);
 		break;
 	default:
 		break;
@@ -1497,7 +1498,7 @@ void sglTranslate(float x, float y, float z) {
 		return;
 	}
 	float translate[16];
-	copyMatrix(translate, identity);
+	copyMatrix(translate, identityMatrix);
 	translate[12] = x;
 	translate[13] = y;
 	translate[14] = z;
@@ -1519,7 +1520,7 @@ void sglScale(float scalex, float scaley, float scalez) {
 		return;
 	}
 	float scale[16];
-	copyMatrix(scale, identity);
+	copyMatrix(scale, identityMatrix);
 	scale[0] = scalex;
 	scale[5] = scaley;
 	scale[10] = scalez;
@@ -1543,8 +1544,8 @@ void sglRotate2D(float angle, float centerx, float centery) {
 
 	float tmp[16];
 	float rotate[16];
-	copyMatrix(tmp, identity);
-	copyMatrix(rotate, identity);
+	copyMatrix(tmp, identityMatrix);
+	copyMatrix(rotate, identityMatrix);
 	tmp[12] = -centerx;
 	tmp[13] = -centery;
 	rotate[0] = cos(angle); rotate[4] = -sin(angle);
@@ -1576,7 +1577,7 @@ void sglRotateY(float angle) {
 	}
 
 	float rotate[16];
-	copyMatrix(rotate, identity);
+	copyMatrix(rotate, identityMatrix);
 	rotate[0] = cos(angle); rotate[8] = -sin(angle);
 	rotate[2] = sin(angle); rotate[10] = cos(angle);
 
@@ -1599,7 +1600,7 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
 	}
 
 	float ortho[16];
-	copyMatrix(ortho, identity);
+	copyMatrix(ortho, identityMatrix);
 	ortho[0] = 2.0f / (right - left);
 	ortho[5] = 2.0f / (top - bottom);
 	ortho[10] = - 2.0f / (far - near);
@@ -1640,7 +1641,7 @@ void sglFrustum(float left, float right, float bottom, float top, float near, fl
 	float D = - 2.0f * far * near / (far - near);
 
 	float persp[16];
-	copyMatrix(persp, identity);
+	copyMatrix(persp, identityMatrix);
 	persp[0] = 2.0f * near/ (right - left);
 	persp[5] = 2.0f * near / (top - bottom);
 	persp[8] = A;
