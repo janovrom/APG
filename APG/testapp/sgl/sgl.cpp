@@ -202,7 +202,7 @@ void sglBegin(sglEElementType mode)
 		setErrCode(SGL_INVALID_OPERATION);
 		return; 
 	}
-	if (mode <= 0 || mode >= sglEElementType::SGL_LAST_ELEMENT_TYPE) 
+	if (mode <= 0 || mode >= SGL_LAST_ELEMENT_TYPE) 
 	{ 
 		setErrCode(SGL_INVALID_ENUM); 
 		return; 
@@ -752,16 +752,16 @@ void sglEnd(void)
 
 	switch (drawingMethod)
 	{
-	case sglEElementType::SGL_POINTS:
+	case SGL_POINTS:
 		drawPoints();
 		break;
-	case sglEElementType::SGL_LINES:
+	case SGL_LINES:
 		drawLines();
 		break;
-	case sglEElementType::SGL_LINE_STRIP:
+	case SGL_LINE_STRIP:
 		drawLineStrip();
 		break;
-	case sglEElementType::SGL_LINE_LOOP:
+	case SGL_LINE_LOOP:
 		drawLineLoop();
 		break;
 	default:
