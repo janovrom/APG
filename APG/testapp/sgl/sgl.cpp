@@ -1511,15 +1511,15 @@ void sglRotate2D(float angle, float centerx, float centery) {
 	float rotate[16];
 	copyMatrix(tmp, identity);
 	copyMatrix(rotate, identity);
-	tmp[12] = centerx;
-	tmp[13] = centery;
+	tmp[12] = -centerx;
+	tmp[13] = -centery;
 	rotate[0] = cos(angle); rotate[4] = -sin(angle);
 	rotate[1] = sin(angle); rotate[5] = cos(angle);
 
 	multiplyMatrix(rotate, tmp);
 
-	tmp[12] = -centerx;
-	tmp[13] = -centery;
+	tmp[12] = centerx;
+	tmp[13] = centery;
 
 	multiplyMatrix(tmp, rotate);
 

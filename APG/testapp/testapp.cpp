@@ -21,8 +21,8 @@
 
 #ifdef TEST1
 //#define TEST_1A
-#define TEST_1B
-//#define TEST_1C
+//#define TEST_1B
+#define TEST_1C
 #endif
 
 #ifdef TEST2
@@ -490,8 +490,8 @@ void branch(int depth,float rot)
   sglPushMatrix();
   for(int i=0; i<3; i++) {
     sglScale(0.87,0.87,1);
-    sglTranslate(0,2,0);
 		sglRotate2D(rot*0.15, 0, 1);
+    sglTranslate(0,2,0);
 
 	/*
 	sglPointSize(5);
