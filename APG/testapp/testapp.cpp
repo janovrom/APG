@@ -15,8 +15,8 @@
 //#define TEST5
 
 #ifdef TEST0
-//#define TEST_0A
-//#define TEST_0B
+#define TEST_0A
+#define TEST_0B
 #endif
 
 #ifdef TEST1

@@ -335,8 +335,12 @@ void drawPointRotatedAndScaled(inputPoint4f* point)
 }
 // HERE UNUSED CODE ENDS
 
+/**
+Method to draw point of specific size. Point is centered to middle (for odd size) with added right and bottom line (for even size).
+*/
 void drawMeAPoint(inputPoint4f* point) 
 {
+	//transform point
 	inputPoint4f output;
 	output.r = point->r;
 	output.g = point->g;
@@ -344,6 +348,7 @@ void drawMeAPoint(inputPoint4f* point)
 	output.a = point->a;
 	transformThePoint(point, output);
 
+	//get color buffer and its properties
 	int W, H, x, y;
 
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
@@ -356,9 +361,12 @@ void drawMeAPoint(inputPoint4f* point)
 
 	int offset;
 
+	//count size of pixel and right-bottom correction for even size.
 	int size = (int)((pointSize-1) / 2);
 	int sizeCorrection = 1 - (int) pointSize % 2;
 
+
+	//set pixels in square
 	for (int i = x - size; i <= x + (size + sizeCorrection); i++)
 	{
 		for (int j = y - size; j <= y + (size + sizeCorrection); j++)
@@ -374,7 +382,9 @@ void drawMeAPoint(inputPoint4f* point)
 	}
 
 }
-
+/**
+Naive method that was used to verify BresenhamLine work. It just samples line on X or Y axis and computes other coordinate.
+*/
 void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 {
 	int W, H, tempX, tempY, offset;
@@ -394,13 +404,6 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 	endT.g = end->g;
 	endT.b = end->b;
 	transformThePoint(end, endT);
-
-	/*if (startT.x > endT.x)
-	{
-		inputPoint4f swapT = startT;
-		startT = endT;
-		endT = swapT;
-	}*/
 
 	int x0, x1, y0, y1;
 	float k;
@@ -476,18 +479,21 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 	}
 	//printf("IMPLEMENT ME: sgl.cpp -> drawMeALine \n");
 		}
-
+/**
+Method drawing line using bresenham algoritm.
+*/
 void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 
 {
 	int W, H, offset;
 	int x0, x1, y0, y1, swap;
-
+	//get collor buffer and its properties
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
 	float *colorBuffer = cont->getColorBuffer();
 
+	//papply transformations to both ends
 	inputPoint4f startT;
 	startT.r = start->r;
 	startT.g = start->g;
@@ -499,6 +505,7 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 	endT.b = end->b;
 	transformThePoint(end, endT);
 
+	//setup variables to work with
 	x0 = (startT).x;
 	y0 = (startT).y;
 	x1 = (endT).x;
@@ -506,8 +513,8 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 
 	int dx, dy;
 
+	//decide which axis should be used for sampling (and make x be the one that grows faster)
 	bool drivingX = std::abs(x1 - x0) > std::abs(y1 - y0);
-
 	if (!drivingX)
 	{
 		swap = x0;
@@ -519,6 +526,7 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 		y1 = swap;
 	}
 
+	//make point 0 be the most left one
 	if (x0 > x1)
 	{
 		swap = x0;
@@ -534,19 +542,22 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 		endT = swap4f;
 	}
 
-	//dx = x1 - x0;
+	//compute deltas
 	dx = std::abs(x1 - x0);
 	dy = y1 - y0;
+	//decide it it will be quadrant 1,3 (value 1) or 2,4 (value -1)
 	int yAdd = (dy < 0) ? -1 : 1;
 	dy = std::abs(dy);
 
+	//compute initial value of parameter p and constants c0, c1 for further modification of p
 	int p = 2 * dy - dx;
 	int c0 = 2 * dy;
 	int c1 = c0 - 2 * dx;
 	int tempY = y0;
+	//variable for linear interpolation of color of line
 	float lerpValue;
 
-
+	//initial point (no p modifications)
 	if (drivingX)
 	{
 		if (x0 >= 0 && x0 < W && y0 >= 0 && y0 < H)
@@ -571,17 +582,16 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 	}
 
 
+	//rest of points (p is always modified)
 	for (int tempX = x0 + 1; tempX <= x1; tempX++)
 	{
 		lerpValue = (float)(tempX - x0) / (x1 - x0);
 		if (p < 0)
 		{
 			p += c0;
-			//lerpValue = 0;
 		}else {
 			p += c1;
 			tempY += yAdd;
-			//lerpValue = 1;
 		}
 		if(drivingX)
 		{
@@ -607,9 +617,12 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 	}
 
 }
-
+/**
+Method to choose which algoritm will be used to draw line
+*/
 void drawMeALine(inputPoint4f* start, inputPoint4f* end)
 {
+	//choose which algorithm to use
 	#ifdef LINE_NAIVE
 		drawMeALineNaive(start, end);
 	#else
@@ -617,6 +630,9 @@ void drawMeALine(inputPoint4f* start, inputPoint4f* end)
 	#endif
 }
 
+/**
+Method draw all points stored in vertex buffer.
+*/
 void drawPoints() 
 {
 	inputPoint4f *tempPoint;
@@ -630,11 +646,15 @@ void drawPoints()
 	}
 }
 
+/**
+draw lines
+*/
 void drawLines()
 {
 	inputPoint4f *tempPoint1;
 	inputPoint4f *tempPoint2;
 
+	//pick 2 following points and connect them with line
 	while (!queue4f.empty())
 	{
 		tempPoint1 = queue4f.front();
@@ -650,9 +670,12 @@ void drawLines()
 		delete tempPoint2;
 	}
 }
-
+/**
+draw a strip of lines
+*/
 void drawLineStrip()
 {
+	//it is completely same as line loop but without line from end to start.
 	inputPoint4f *tempPoint1;
 	inputPoint4f *tempPoint2;
 
@@ -671,19 +694,23 @@ void drawLineStrip()
 	}
 	delete tempPoint2;
 }
-
+/**
+draw a loop of lines
+*/
 void drawLineLoop()
 {
 	inputPoint4f origin;
 	inputPoint4f *tempPoint1;
 	inputPoint4f *tempPoint2;
 
+	//store first point
 	if (queue4f.empty()) { return; }
 	tempPoint2 = queue4f.front();
 	origin = *tempPoint2;
 	queue4f.pop();
 	int counter = 1;
 
+	//draw lines form first point to last point
 	while (!queue4f.empty())
 	{
 		tempPoint1 = tempPoint2;
@@ -695,6 +722,7 @@ void drawLineLoop()
 		delete tempPoint1;
 	}
 
+	//draw line from last point to first point
 	if (counter > 1)
 	{
 		drawMeALine(tempPoint2, &origin);
@@ -864,6 +892,9 @@ void setSymPointsModified(int x, int y, int xs, int ys, inputPoint4f& point) {
 }
 // HERE UNUSED CODE ENDS
 
+/**
+Method to set single pixel in color buffer to specific color. (always size 1*1)
+*/
 void setPixel(float x0, float y0, float r, float g, float b)
 {
 	int W, H, x, y;
@@ -938,6 +969,9 @@ void sglCircle(float x, float y, float z, float radius) {
 	pointSize = psize;
 }
 
+/**
+Second algoritm to draw ellipses. 
+*/
 void sglEllipseSecond(float x, float y, float z, float a, float b) {
 	if (contextWrapper.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
@@ -1170,7 +1204,7 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 
 void sglEllipse(float x, float y, float z, float a, float b) {
 	#ifdef ELLIPSE
-		sglEllipseSegmented(x, y, z, a, b);
+	sglEllipseSegmented(x, y, z, a, b);
 	#elif ELLIPSE_SECOND
 		sglEllipseSecond(x, y, z, a, b);
 	#else
