@@ -17,6 +17,7 @@
 std::stack<float *> modelViewStack;
 std::stack<float *> projectionStack;
 
+// identity matrix for easy copying
 float identity[16] ={	1.0f, 0.0f, 0.0f, 0.0f,
 						0.0f, 1.0f, 0.0f, 0.0f, 
 						0.0f, 0.0f, 1.0f, 0.0f, 
@@ -51,6 +52,7 @@ float dotVectors(const float* left, inputPoint4f* vector, int i) {
 
 	return tmp;
 }
+
 void multiplyMatrixVector(const float* matrix, inputPoint4f* vector, inputPoint4f& output) {
 	output.x = dotVectors(matrix, vector, 0);
 	output.y = dotVectors(matrix, vector, 1);
@@ -64,6 +66,7 @@ void copyMatrix(float* output, const float* input) {
 	}
 }
 
+// HERE UNUSED CODE STARTS
 bool invertMatrix(const float m[16], float invOut[16])
 {
 	float inv[16], det;
@@ -193,33 +196,9 @@ bool invertMatrix(const float m[16], float invOut[16])
 
 	return true;
 }
-
-void multiplyMatrixSaveToRight(float* right, const float* left) {
-	float output[16];
-	for (int i = 0; i < 4; ++i) {
-		for (int j = 0; j < 4; ++j) {
-			output[i * 4 + j] = dotVectors(left, right, j, i);
-		}
-	}
-	copyMatrix(right, output);
-}
+// HERE UNUSED CODE ENDS
 
 void multiplyMatrix(float* left, const float* right) {
-	/*printf("START MULTIPLICATION!\n");
-	for (int i = 0; i < 4; i++) {
-	printf("\n");
-	for (int j = i; j < 16; j += 4) {
-	printf("%f ", right[j]);
-	}
-	}
-	printf("\n");
-	for (int i = 0; i < 4; i++) {
-		printf("\n");
-		for (int j = i; j < 16; j += 4) {
-			printf("%f ", left[j]);
-		}
-	}
-	printf("\n");*/
 	float output[16];
 	for (int i = 0; i < 4; ++i) {
 		for (int j = 0; j < 4; ++j) {
@@ -233,12 +212,14 @@ void multiplyMatrix(float* left, const float* right) {
 			printf("%f ", left[j]);
 		}
 	}
-	printf("END MULTIPLICATION!\n");*/
+	*/
 }
-
+// HERE UNUSED CODE STARTS
 bool invertedForObject = false;
 float inversedProjectionMatrix[16];
 float inversedViewportMatrix[16];
+// HERE UNUSED CODE ENDS
+
 float viewportMatrix[16];
 float multipliedMatrix[16];
 
