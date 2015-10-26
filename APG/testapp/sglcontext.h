@@ -3,6 +3,8 @@
 #include <cfloat>
 #include <queue>
 #include <stack>
+#include <cstdlib>
+#include <cmath>
 #define MIN_CONTEXTS 32
 /*
 #define _CRTDBG_MAP_ALLOC
