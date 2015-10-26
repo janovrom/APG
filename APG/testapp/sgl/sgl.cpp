@@ -270,8 +270,8 @@ void drawPointNoTransform (inputPoint4f& point) {
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = (int)round(point.x);
-	y = (int)round(point.y);
+	x = (int)std::round(point.x);
+	y = (int)std::round(point.y);
 
 	float *colorBuffer = cont->getColorBuffer();
 
