@@ -1030,16 +1030,14 @@ void sglEllipseSegmented(float x, float y, float z, float a, float b)
 	y = output.y;
 	*/
 	sglBegin(SGL_LINE_LOOP);
-	float xd, yd;
-	int MAX = 40;
-	for (int i = 0; i < MAX; i++)
+	int segments = 40;
+	float angle = 0.0f;
+	float delta = 2.0f * 3.14159 / segments;
+	for (int i = 0; i <= segments; i++)
 	{
-		xd = x + a * std::cos((2 / MAX) * 3.14 * i);
-		yd = y + b * std::sin((2 / MAX) * 3.14 * i);
-
-		sglVertex2f(xd,yd);
+		sglVertex3f(x + a*cos(angle), y + b*sin(angle), z);
+		angle += delta;
 	}
-
 	sglEnd();
 
 }
@@ -1140,13 +1138,13 @@ void sglEllipseFirst(float x, float y, float z, float a, float b) {
 }
 
 void sglEllipse(float x, float y, float z, float a, float b) {
-	//sglEllipseSegmented(x, y, z, a, b);
+	sglEllipseSegmented(x, y, z, a, b);
 	
-	#ifdef ELLIPSE_SECOND
+	/*#ifdef ELLIPSE_SECOND
 		sglEllipseSecond(x, y, z, a, b);
 	#else
 		sglEllipseFirst(x, y, z, a, b);
-	#endif
+	#endif*/
 	
 }
 
@@ -1238,8 +1236,20 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	if (radius < 0) {
 		setErrCode(sglEErrorCode::SGL_INVALID_VALUE);
 		return;
-}
+	}
+	sglBegin(SGL_LINE_STRIP);
+	int segments = 40;
+	float angle = from;
+	float delta = (to - from) / segments;
+	for (int i = 0; i <= segments; i++)
+	{
+		sglVertex3f(x + radius*cos(angle), y + radius*sin(angle), z);
+		angle += delta;
+	}
+	sglEnd();
 
+	// per pixel arc, but didn't figure how to rotate
+	/*
 	while (from >= 2 * 3.14159274)
 		from -= 2 * 3.14159274;
 
@@ -1288,7 +1298,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	}
 	if (xp == yp)
 		setSymPointsLimit(xp, yp, x, y, &point, radius, from, to);
-
+		*/
 	pointSize = psize;
 }
 
