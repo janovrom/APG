@@ -479,7 +479,9 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 	}
 	//printf("IMPLEMENT ME: sgl.cpp -> drawMeALine \n");
 		}
-
+/**
+Method drawing line using bresenham algoritm.
+*/
 void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 
 {
@@ -967,6 +969,9 @@ void sglCircle(float x, float y, float z, float radius) {
 	pointSize = psize;
 }
 
+/**
+Second algoritm to draw ellipses. 
+*/
 void sglEllipseSecond(float x, float y, float z, float a, float b) {
 	if (contextWrapper.empty() || hasBegun) {
 		setErrCode(sglEErrorCode::SGL_INVALID_OPERATION);
