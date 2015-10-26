@@ -4,7 +4,7 @@
 #include <queue>
 #include <stack>
 #define MIN_CONTEXTS 32
-
+/*
 #define _CRTDBG_MAP_ALLOC
 #define _CRTDBG_MAPALLOC
 #include <stdlib.h>
@@ -13,7 +13,7 @@
 #define DEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
 #define new DEBUG_NEW
 #endif
-
+*/
 std::stack<float *> modelViewStack;
 std::stack<float *> projectionStack;
 
@@ -241,7 +241,7 @@ float colorVertexR = 0, colorVertexG = 0, colorVertexB = 0;
 float colorClearR = 0, colorClearG = 0, colorClearB = 0;
 
 bool depthEnabled = false;
-sglEElementType drawingMethod = sglEElementType::SGL_POINTS;
+sglEElementType drawingMethod = SGL_POINTS;
 
 std::queue<inputPoint4f*> queue4f;
 
