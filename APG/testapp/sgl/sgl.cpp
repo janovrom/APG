@@ -8,6 +8,8 @@
 #include "sgl.h"
 #include "sglcontext.h"
 
+
+
 //#define LINE_NAIVE
 // decides which ellipse algoritm should be used
 #define ELLIPSE
@@ -618,6 +620,53 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 	}
 
 }
+
+void fillLine(int xStart, int xEnd, int row, float colRStart, float colGStart, float colBStart, float colREnd, float colGEnd, float colBEnd)
+{
+
+	int W, H;
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
+	float *colorBuffer = cont->getColorBuffer();
+	W = cont->getWidth();
+	H = cont->getHeight();
+
+	int y = 3*row*W;
+
+	float lerpValue = 0;
+	float lerpAdd = 1.0f / (xEnd - xStart);
+	int offset = y + 3*xStart;
+
+	for (int x = xStart; x <= xEnd; x++)
+	{
+		if (x >= 0 && x < W && y >= 0 && y < H)
+		{
+			*(colorBuffer + offset) = (1-lerpValue)*colRStart + (lerpValue)*colREnd;
+			*(colorBuffer + offset + 1) = (1 - lerpValue)*colGStart + (lerpValue)*colGEnd;
+			*(colorBuffer + offset + 2) = (1 - lerpValue)*colBStart + (lerpValue)*colBEnd;
+		}
+		offset += 3;
+		lerpValue += lerpAdd;
+	}
+}
+
+struct polyEdge
+{
+	int Y_upper, Y_lower, X_cross;
+	float X_upper, X_step;
+	polyEdge *next;
+};
+
+void drawMeAPolygon()
+{
+	printf("drawMeAPolygon dont draw now \n");
+}
+
+void drawMeATriangle()
+{
+	printf("drawMeATriangle dont draw now \n");
+}
+
+
 /**
 Method to choose which algoritm will be used to draw line
 */
@@ -923,8 +972,6 @@ void sglCircle(float x, float y, float z, float radius) {
 		setErrCode(SGL_INVALID_OPERATION); 
 		return; 
 	}
-	int psize = pointSize;
-	pointSize = 1;
 
 	if (radius < 0) {
 		setErrCode(SGL_INVALID_VALUE);
@@ -948,26 +995,39 @@ void sglCircle(float x, float y, float z, float radius) {
 	transformThePoint(&point, output);
 	x = output.x;
 	y = output.y;
-	// Bresenham's algorithm for drawing circle
-	int xp, yp, p;
-	xp = 0;
-	yp = radius;
-	p = 3 - 2 * radius;
-	while (xp < yp) {
-		setSymPoints(xp, yp, x, y, point);
-		if (p < 0) {
-			p = p + 4 * xp + 6;
-		}
-		else {
-			p = p + 4 * (xp - yp) + 10;
-			--yp;
-		}
-		++xp;
-	}
-	if (xp == yp)
-		setSymPoints(xp, yp, x, y, point);
 
-	pointSize = psize;
+	switch (areaMode)
+	{
+	case SGL_POINT:
+		sglBegin(SGL_POINTS);
+		sglVertex3f(x, y, z);
+		sglEnd();
+		break;
+	case SGL_LINE:
+		// Bresenham's algorithm for drawing circle
+		int xp, yp, p;
+		xp = 0;
+		yp = radius;
+		p = 3 - 2 * radius;
+		while (xp < yp) {
+			setSymPoints(xp, yp, x, y, point);
+			if (p < 0) {
+				p = p + 4 * xp + 6;
+			}
+			else {
+				p = p + 4 * (xp - yp) + 10;
+				--yp;
+			}
+			++xp;
+		}
+		if (xp == yp)
+			setSymPoints(xp, yp, x, y, point);
+
+		break;
+	case SGL_FILL:
+		printf("No Circle filling algorithm implemented right now.\n");
+		break;
+	}
 }
 
 /**
@@ -1070,23 +1130,24 @@ void sglEllipseSegmented(float x, float y, float z, float a, float b)
 		setErrCode(SGL_INVALID_VALUE);
 		return;
 	}
-	/*
-	inputPoint4f point;
-	point.x = x;
-	point.y = y;
-	point.z = 0;
-	point.w = 1;
-	point.r = colorVertexR;
-	point.g = colorVertexG;
-	point.b = colorVertexB;
-	point.a = 0;
+	//decide how to draw it.
 
-	inputPoint4f output;
-	transformThePoint(&point, output);
-	x = output.x;
-	y = output.y;
-	*/
-	sglBegin(SGL_LINE_LOOP);
+	switch (areaMode)
+	{
+	case SGL_POINT:
+		sglBegin(SGL_POINTS); 
+		sglVertex3f(x, y, z);
+		sglEnd();
+		break;
+	case SGL_LINE:
+		sglBegin(SGL_LINE_LOOP);
+		break;
+	case SGL_FILL:
+		printf("check sgl.cpp sglEllipseSegmented fill branch.");
+		sglBegin(SGL_POLYGON);
+		break;
+	}
+
 	int segments = 40;
 	float angle = 0.0f;
 	float delta = 2.0f * 3.14159 / segments;
@@ -1289,23 +1350,35 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
-	int psize = pointSize;
-	pointSize = 1;
 
 	if (radius < 0) {
 		setErrCode(SGL_INVALID_VALUE);
 		return;
 	}
-	sglBegin(SGL_LINE_STRIP);
-	int segments = 40;
-	float angle = from;
-	float delta = (to - from) / segments;
-	for (int i = 0; i <= segments; i++)
+
+	switch (areaMode)
 	{
-		sglVertex3f(x + radius*cos(angle), y + radius*sin(angle), z);
-		angle += delta;
+	case SGL_POINT:
+		sglBegin(SGL_POINTS);
+		sglVertex3f(x, y, z);
+		sglEnd();
+		break;
+	case SGL_LINE:
+		sglBegin(SGL_LINE_STRIP);
+		int segments = 40;
+		float angle = from;
+		float delta = (to - from) / segments;
+		for (int i = 0; i <= segments; i++)
+		{
+			sglVertex3f(x + radius*cos(angle), y + radius*sin(angle), z);
+			angle += delta;
+		}
+		sglEnd();
+		break;
+	case SGL_FILL:
+		printf("No Arc filling algorithm implemented right now. \n");
+		break;
 	}
-	sglEnd();
 
 	// per pixel arc, but didn't figure how to rotate
 	/*
@@ -1358,7 +1431,6 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 	if (xp == yp)
 		setSymPointsLimit(xp, yp, x, y, &point, radius, from, to);
 		*/
-	pointSize = psize;
 }
 
 //---------------------------------------------------------------------------
@@ -1689,7 +1761,30 @@ void sglColor3f(float r, float g, float b)
 	colorVertexB = b;
 }
 
-void sglAreaMode(sglEAreaMode mode) {}
+void sglAreaMode(sglEAreaMode mode) 
+{
+	if (hasBegun || contextWrapper.empty())
+	{
+		setErrCode(SGL_INVALID_OPERATION);
+		return;
+	}
+	switch (mode)
+	{
+	case SGL_POINT:
+		areaMode = SGL_POINT;
+		break;
+	case SGL_LINE:
+		areaMode = SGL_LINE;
+		break;
+	case SGL_FILL:
+		areaMode = SGL_FILL;
+		break;
+	default:
+		setErrCode(SGL_INVALID_ENUM);
+		break;
+	}
+
+}
 
 void sglPointSize(float size) 
 {
