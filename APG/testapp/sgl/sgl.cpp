@@ -17,6 +17,11 @@
 using namespace std;
 
 void setPixel(float x0, float y0, float r, float g, float b);
+void drawMeALine(inputPoint4f* start, inputPoint4f* end);
+void drawPoints();
+void drawLineStrip();
+void drawLineLoop();
+
 /// Current error code.
 static sglEErrorCode _libStatus = SGL_NO_ERROR;
 
@@ -638,7 +643,7 @@ void fillLine(int xStart, int xEnd, int row, float colRStart, float colGStart, f
 
 	for (int x = xStart; x <= xEnd; x++)
 	{
-		if (x >= 0 && x < W && y >= 0 && y < H)
+		if (x >= 0 && x < W && row >= 0 && row < H)
 		{
 			*(colorBuffer + offset) = (1-lerpValue)*colRStart + (lerpValue)*colREnd;
 			*(colorBuffer + offset + 1) = (1 - lerpValue)*colGStart + (lerpValue)*colGEnd;
@@ -678,7 +683,7 @@ void drawMeAPolygon()
 
 		inputPoint4f pointStart;
 		inputPoint4f pointEnd;
-
+		/*
 		//store first point
 		if (queue4f.empty()) { return; }
 		tempPoint2 = queue4f.front();
@@ -705,14 +710,32 @@ void drawMeAPolygon()
 			drawMeALine(tempPoint2, &origin);
 		}
 		delete tempPoint2;
+		*/
 		break;
 	}
 	printf("drawMeAPolygon dont draw now \n");
 }
 
+void drawMeATriangleLineLoop(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
+{
+	printf("drawTriangleLineLoop not implemented yet! \n Transformation of points is still missing\n");
+
+	drawMeALine(v1, v2);
+	drawMeALine(v2, v3);
+	drawMeALine(v3, v1);
+}
+
 void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 {
+	printf("trianglePrinting \n");
 	inputPoint4f *p1, *p2, *p3;
+	//printf("%f %f %f \n", v1->x, v1->y, v1->z);
+
+	
+	//drawPointNoTransform(*v1);
+	//drawPointNoTransform(*v2);
+	//drawPointNoTransform(*v3);
+	
 
 	//order points
 	if (v1->y >= v2->y)
@@ -781,14 +804,17 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 	float l;
 	l = (p2->y - p1->y) / (p3->y - p1->y);
 
-	splittingPoint.x = l*p1->x + (1 - l)*p3->x;
-	splittingPoint.y = l*p1->y + (1 - l)*p3->y;
-	splittingPoint.z = l*p1->z + (1 - l)*p3->z;
-	splittingPoint.w = l*p1->w + (1 - l)*p3->w;
+	splittingPoint.x = (1 - l)*p1->x + l*p3->x;
+	splittingPoint.y = (1 - l)*p1->y + l*p3->y;
+	splittingPoint.z = (1 - l)*p1->z + l*p3->z;
+	splittingPoint.w = (1 - l)*p1->w + l*p3->w;
 
-	splittingPoint.r = l*p1->r + (1 - l)*p3->r;
-	splittingPoint.g = l*p1->g + (1 - l)*p3->g;
-	splittingPoint.b = l*p1->b + (1 - l)*p3->b;
+	splittingPoint.r = (1 - l)*p1->r + l*p3->r;
+	splittingPoint.g = (1 - l)*p1->g + l*p3->g;
+	splittingPoint.b = (1 - l)*p1->b + l*p3->b;
+
+	//sglPointSize(5);
+	//drawPointNoTransform(splittingPoint);
 
 	int xInitLeft, xInitRight, yStart, yEnd, yCurrent, stepCount;
 	float stepXLeft, stepXRight;
@@ -804,7 +830,7 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 			yStart = p1->y;
 			yCurrent = yStart;
 			yEnd = p2->y;
-			stepCount = yEnd - yStart;
+			stepCount = yStart - yEnd;
 			stepXLeft = (p2->x - p1->x) / stepCount;
 			stepXRight = (splittingPoint.x - p1->x) / stepCount;
 			xInitLeft = xInitRight = p1->x;
@@ -824,8 +850,11 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 			gRd = (splittingPoint.g - gR) / stepCount;
 			bRd = (splittingPoint.b - bR) / stepCount;
 
+			
 			for (int i = 0; i <= stepCount; i++)
 			{
+				//setPixel((int)(xInitLeft + i * stepXLeft), yCurrent, rL, gL, bL);
+				//setPixel((int)(xInitRight + i * stepXRight), yCurrent, rR, gR, bR);
 				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), yCurrent, rL, gL, bL, rR, gR, bR);
 				//update left color
 				rL += rLd;
@@ -836,7 +865,7 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 				gR += gRd;
 				bR += bRd;
 				//update row
-				yCurrent++;
+				yCurrent--;
 			}
 		}
 
@@ -845,7 +874,7 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 			yStart = p3->y;
 			yCurrent = yStart;
 			yEnd = p2->y;
-			stepCount = yStart - yEnd;
+			stepCount = yEnd - yStart;
 			stepXLeft = (p2->x - p3->x) / stepCount;
 			stepXRight = (splittingPoint.x - p3->x) / stepCount;
 			xInitLeft = xInitRight = p3->x;
@@ -877,17 +906,17 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 				gR += gRd;
 				bR += bRd;
 				//update row
-				yCurrent--;
+				yCurrent++;
 			}
 		}
 	}else {
-		//spritting point is lefter
+		//splitting point is lefter
 		{
 			//upper triangle
 			yStart = p1->y;
 			yCurrent = yStart;
-			yEnd = p2->y;
-			stepCount = yEnd - yStart;
+			yEnd = splittingPoint.y;
+			stepCount = yStart - yEnd;
 			stepXLeft = (splittingPoint.x - p1->x) / stepCount;
 			stepXRight = (p2->x - p1->x) / stepCount;
 			xInitLeft = xInitRight = p1->x;
@@ -907,8 +936,11 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 			gRd = (p2->g - gR) / stepCount;
 			bRd = (p2->b - bR) / stepCount;
 
+
 			for (int i = 0; i <= stepCount; i++)
 			{
+				setPixel((int)(xInitLeft + i * stepXLeft), yCurrent, rL, gL, bL);
+				setPixel((int)(xInitRight + i * stepXRight), yCurrent, rR, gR, bR);
 				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), yCurrent, rL, gL, bL, rR, gR, bR);
 				//update left color
 				rL += rLd;
@@ -919,7 +951,7 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 				gR += gRd;
 				bR += bRd;
 				//update row
-				yCurrent++;
+				yCurrent--;
 			}
 		}
 
@@ -927,8 +959,8 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 			//lower triangle
 			yStart = p3->y;
 			yCurrent = yStart;
-			yEnd = p2->y;
-			stepCount = yStart - yEnd;
+			yEnd = splittingPoint.y;
+			stepCount = yEnd - yStart;
 			stepXLeft = (splittingPoint.x - p3->x) / stepCount;
 			stepXRight = (p2->x - p3->x) / stepCount;
 			xInitLeft = xInitRight = p3->x;
@@ -960,13 +992,94 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 				gR += gRd;
 				bR += bRd;
 				//update row
-				yCurrent--;
+				yCurrent++;
 			}
 		}
 
 	}
 
-	printf("drawMeATriangle dont draw now \n");
+	printf("drawMeATriangle not implemented yet! \n Transformation of points is still missing\n");
+}
+
+void drawTriangles()
+{
+
+	inputPoint4f *tempPoint1;
+	inputPoint4f *tempPoint2;
+	inputPoint4f *tempPoint3;
+	switch (areaMode)
+	{
+	case SGL_POINT:
+		drawPoints();
+		break;
+	case SGL_LINE:
+
+		while (!queue4f.empty())
+		{
+			tempPoint1 = queue4f.front();
+			queue4f.pop();
+
+			if (queue4f.empty())
+			{
+				delete tempPoint1;
+				break;
+			}
+
+			tempPoint2 = queue4f.front();
+			queue4f.pop();
+
+			if (queue4f.empty())
+			{
+				delete tempPoint1;
+				delete tempPoint2;
+				break;
+			}
+
+			tempPoint3 = queue4f.front();
+			queue4f.pop();
+
+			drawMeATriangleLineLoop(tempPoint1, tempPoint2, tempPoint3);
+
+			delete tempPoint1;
+			delete tempPoint2;
+			delete tempPoint3;
+		}
+		break;
+	case SGL_FILL:
+
+		while (!queue4f.empty())
+		{
+			tempPoint1 = queue4f.front();
+			queue4f.pop();
+
+			if (queue4f.empty())
+			{
+				delete tempPoint1;
+				break;
+			}
+
+			tempPoint2 = queue4f.front();
+			queue4f.pop();
+
+			if (queue4f.empty())
+			{
+				delete tempPoint1;
+				delete tempPoint2;
+				break;
+			}
+
+			tempPoint3 = queue4f.front();
+			queue4f.pop();
+
+			//printf("sending %f %f %f \n", tempPoint1->x, tempPoint1->y, tempPoint1->z);
+			drawMeATriangle(tempPoint1, tempPoint2, tempPoint3);
+
+			delete tempPoint1;
+			delete tempPoint2;
+			delete tempPoint3;
+		}
+		break;
+	}
 }
 
 
@@ -1013,7 +1126,11 @@ void drawLines()
 		tempPoint1 = queue4f.front();
 		queue4f.pop();
 
-		if (queue4f.empty()) { break; }
+		if (queue4f.empty())
+		{
+			delete tempPoint1;
+			break;
+		}
 
 		tempPoint2 = queue4f.front();
 		queue4f.pop();
@@ -1115,6 +1232,12 @@ void sglEnd(void)
 		break;
 	case SGL_LINE_LOOP:
 		drawLineLoop();
+		break;
+	case SGL_TRIANGLES:
+		drawTriangles();
+		break;
+	case SGL_POLYGON:
+		drawMeAPolygon();
 		break;
 	default:
 		break;
@@ -1659,6 +1782,11 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 		return;
 	}
 
+
+	int segments;
+	float angle;
+	float delta;
+
 	switch (areaMode)
 	{
 	case SGL_POINT:
@@ -1668,9 +1796,9 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 		break;
 	case SGL_LINE:
 		sglBegin(SGL_LINE_STRIP);
-		int segments = 40;
-		float angle = from;
-		float delta = (to - from) / segments;
+		segments = 40;
+		angle = from;
+		delta = (to - from) / segments;
 		for (int i = 0; i <= segments; i++)
 		{
 			sglVertex3f(x + radius*cos(angle), y + radius*sin(angle), z);

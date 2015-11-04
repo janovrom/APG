@@ -8,7 +8,7 @@
 /// uncomment the tests you wish to run
 
 #define TEST0
-#define TEST1
+//#define TEST1
 //#define TEST2
 //#define TEST3
 //#define TEST4
@@ -16,7 +16,7 @@
 
 #ifdef TEST0
 #define TEST_0A
-#define TEST_0B
+//#define TEST_0B
 #endif
 
 #ifdef TEST1
@@ -677,6 +677,8 @@ void DrawTestScene0A(void)
   float radiusStep = (HEIGHT)/numCircles;
   //float radiusStep = .5f/numCircles;
   float r = radiusStep;
+
+  /*
   for(int j=0; j < numCircles; j++, r+=radiusStep) {
     // point test
     sglColor3f(j/(float)numCircles,j/(float)numCircles,j/(float)numCircles);
@@ -690,6 +692,19 @@ void DrawTestScene0A(void)
     }
     sglEnd();
   }
+  */
+
+  sglBegin(SGL_TRIANGLES);
+  sglColor3f(1.0f, 0.0f, 0.0f);
+  sglVertex2f(300, 300);
+  sglColor3f(0.0f, 1.0f, 0.0f);
+  sglVertex2f(350, 200);
+  sglColor3f(0.0f, 0.0f, 1.0f);
+  sglVertex2f(400, 500);
+  sglEnd();
+
+
+
 }
 
 void DrawTestScene0B(void) 
