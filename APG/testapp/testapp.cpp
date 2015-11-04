@@ -693,7 +693,17 @@ void DrawTestScene0A(void)
     sglEnd();
   }
   */
+  sglAreaMode(SGL_FILL);
+  sglBegin(SGL_TRIANGLES);
+  sglColor3f(1.0f, 0.0f, 0.0f);
+  sglVertex2f(300, 300);
+  sglColor3f(0.0f, 1.0f, 0.0f);
+  sglVertex2f(350, 200);
+  sglColor3f(0.0f, 0.0f, 1.0f);
+  sglVertex2f(400, 500);
+  sglEnd();
 
+  sglAreaMode(SGL_LINE);
   sglBegin(SGL_TRIANGLES);
   sglColor3f(1.0f, 0.0f, 0.0f);
   sglVertex2f(300, 300);

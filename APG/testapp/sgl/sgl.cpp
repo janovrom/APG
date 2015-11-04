@@ -729,14 +729,12 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 {
 	printf("trianglePrinting \n");
 	inputPoint4f *p1, *p2, *p3;
-	//printf("%f %f %f \n", v1->x, v1->y, v1->z);
 
+	transformThePoint(v1, *v1);
+	transformThePoint(v2, *v2);
+	transformThePoint(v3, *v3);
 	
-	//drawPointNoTransform(*v1);
-	//drawPointNoTransform(*v2);
-	//drawPointNoTransform(*v3);
 	
-
 	//order points
 	if (v1->y >= v2->y)
 	{
