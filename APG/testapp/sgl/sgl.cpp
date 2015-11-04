@@ -658,11 +658,314 @@ struct polyEdge
 
 void drawMeAPolygon()
 {
+	switch (areaMode)
+	{
+	case SGL_POINT:
+		drawPoints();
+			break;
+	case SGL_LINE:
+		drawLineLoop();
+		break;
+	case SGL_FILL:
+		polyEdge *root = new polyEdge;
+		polyEdge *end = root;
+		polyEdge *boundUpper;
+		polyEdge *boundLower;
+
+		inputPoint4f origin;
+		inputPoint4f *tempPoint1;
+		inputPoint4f *tempPoint2;
+
+		inputPoint4f pointStart;
+		inputPoint4f pointEnd;
+
+		//store first point
+		if (queue4f.empty()) { return; }
+		tempPoint2 = queue4f.front();
+		origin = *tempPoint2;
+		queue4f.pop();
+		int counter = 1;
+
+		//draw lines form first point to last point
+		while (!queue4f.empty())
+		{
+			tempPoint1 = tempPoint2;
+			tempPoint2 = queue4f.front();
+			queue4f.pop();
+			counter++;
+
+			root->next = new polyEdge;
+
+			delete tempPoint1;
+		}
+
+		//draw line from last point to first point
+		if (counter > 1)
+		{
+			drawMeALine(tempPoint2, &origin);
+		}
+		delete tempPoint2;
+		break;
+	}
 	printf("drawMeAPolygon dont draw now \n");
 }
 
-void drawMeATriangle()
+void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 {
+	inputPoint4f *p1, *p2, *p3;
+
+	//order points
+	if (v1->y >= v2->y)
+	{
+		// v1 >= v2
+		if (v1->y >= v3->y)
+		{
+			// v1 >= v2
+			// v1 >= v3
+			if(v2->y >= v3->y)
+			{
+				// v1 >= v2
+				// v1 >= v3
+				// v2 >= v3
+				p1 = v1;
+				p2 = v2;
+				p3 = v3;
+			}else {
+				// v1 >= v2
+				// v1 >= v3
+				// v3 > v2
+				p1 = v1;
+				p2 = v3;
+				p3 = v2;
+			}
+		}else {
+			// v1 >= v2
+			// v3 > v1
+			p1 = v3;
+			p2 = v1;
+			p3 = v2;
+		}
+	}else {
+		// v2 > v1
+		if (v2->y >= v3->y)
+		{
+			// v2 > v1
+			// v2 >= v3
+			if (v1->y >= v3->y)
+			{
+				// v2 > v1
+				// v2 >= v3
+				// v1 >= v3
+				p1 = v2;
+				p2 = v1;
+				p3 = v3;
+			}else {
+				// c2 > v1
+				// v2 >= v3
+				// v3 > v1
+				p1 = v2;
+				p2 = v3;
+				p3 = v1;
+			}
+		}else {
+			// v2 > v1
+			// v3 > v2
+			p1 = v3;
+			p2 = v2;
+			p3 = v1;
+		}
+	}
+	//points ordered
+
+	inputPoint4f splittingPoint;
+	float l;
+	l = (p2->y - p1->y) / (p3->y - p1->y);
+
+	splittingPoint.x = l*p1->x + (1 - l)*p3->x;
+	splittingPoint.y = l*p1->y + (1 - l)*p3->y;
+	splittingPoint.z = l*p1->z + (1 - l)*p3->z;
+	splittingPoint.w = l*p1->w + (1 - l)*p3->w;
+
+	splittingPoint.r = l*p1->r + (1 - l)*p3->r;
+	splittingPoint.g = l*p1->g + (1 - l)*p3->g;
+	splittingPoint.b = l*p1->b + (1 - l)*p3->b;
+
+	int xInitLeft, xInitRight, yStart, yEnd, yCurrent, stepCount;
+	float stepXLeft, stepXRight;
+
+	float rL, rR, gL, gR, bL, bR;
+	float rLd, rRd, gLd, gRd, bLd, bRd;
+
+	if (p2->x <= splittingPoint.x)
+	{
+		//p2 is lefter
+		{
+			//upper triangle
+			yStart = p1->y;
+			yCurrent = yStart;
+			yEnd = p2->y;
+			stepCount = yEnd - yStart;
+			stepXLeft = (p2->x - p1->x) / stepCount;
+			stepXRight = (splittingPoint.x - p1->x) / stepCount;
+			xInitLeft = xInitRight = p1->x;
+
+
+			//prepare startingColor left and right
+			rL = rR = p1->r;
+			gL = gR = p1->g;
+			bL = bR = p1->b;
+			//prepare lerp increment
+			//lerp left
+			rLd = (p2->r - rL) / stepCount;
+			gLd = (p2->g - gL) / stepCount;
+			bLd = (p2->b - bL) / stepCount;
+			//lerp right
+			rRd = (splittingPoint.r - rR) / stepCount;
+			gRd = (splittingPoint.g - gR) / stepCount;
+			bRd = (splittingPoint.b - bR) / stepCount;
+
+			for (int i = 0; i <= stepCount; i++)
+			{
+				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), yCurrent, rL, gL, bL, rR, gR, bR);
+				//update left color
+				rL += rLd;
+				gL += gLd;
+				bL += bLd;
+				//update right color
+				rR += rRd;
+				gR += gRd;
+				bR += bRd;
+				//update row
+				yCurrent++;
+			}
+		}
+
+		{
+			//lower triangle
+			yStart = p3->y;
+			yCurrent = yStart;
+			yEnd = p2->y;
+			stepCount = yStart - yEnd;
+			stepXLeft = (p2->x - p3->x) / stepCount;
+			stepXRight = (splittingPoint.x - p3->x) / stepCount;
+			xInitLeft = xInitRight = p3->x;
+
+
+			//prepare startingColor left and right
+			rL = rR = p3->r;
+			gL = gR = p3->g;
+			bL = bR = p3->b;
+			//prepare lerp increment
+			//lerp left
+			rLd = (p2->r - rL) / stepCount;
+			gLd = (p2->g - gL) / stepCount;
+			bLd = (p2->b - bL) / stepCount;
+			//lerp right
+			rRd = (splittingPoint.r - rR) / stepCount;
+			gRd = (splittingPoint.g - gR) / stepCount;
+			bRd = (splittingPoint.b - bR) / stepCount;
+
+			for (int i = 0; i <= stepCount; i++)
+			{
+				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), yCurrent, rL, gL, bL, rR, gR, bR);
+				//update left color
+				rL += rLd;
+				gL += gLd;
+				bL += bLd;
+				//update right color
+				rR += rRd;
+				gR += gRd;
+				bR += bRd;
+				//update row
+				yCurrent--;
+			}
+		}
+	}else {
+		//spritting point is lefter
+		{
+			//upper triangle
+			yStart = p1->y;
+			yCurrent = yStart;
+			yEnd = p2->y;
+			stepCount = yEnd - yStart;
+			stepXLeft = (splittingPoint.x - p1->x) / stepCount;
+			stepXRight = (p2->x - p1->x) / stepCount;
+			xInitLeft = xInitRight = p1->x;
+
+
+			//prepare startingColor left and right
+			rL = rR = p1->r;
+			gL = gR = p1->g;
+			bL = bR = p1->b;
+			//prepare lerp increment
+			//lerp left
+			rLd = (splittingPoint.r - rL) / stepCount;
+			gLd = (splittingPoint.g - gL) / stepCount;
+			bLd = (splittingPoint.b - bL) / stepCount;
+			//lerp right
+			rRd = (p2->r - rR) / stepCount;
+			gRd = (p2->g - gR) / stepCount;
+			bRd = (p2->b - bR) / stepCount;
+
+			for (int i = 0; i <= stepCount; i++)
+			{
+				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), yCurrent, rL, gL, bL, rR, gR, bR);
+				//update left color
+				rL += rLd;
+				gL += gLd;
+				bL += bLd;
+				//update right color
+				rR += rRd;
+				gR += gRd;
+				bR += bRd;
+				//update row
+				yCurrent++;
+			}
+		}
+
+		{
+			//lower triangle
+			yStart = p3->y;
+			yCurrent = yStart;
+			yEnd = p2->y;
+			stepCount = yStart - yEnd;
+			stepXLeft = (splittingPoint.x - p3->x) / stepCount;
+			stepXRight = (p2->x - p3->x) / stepCount;
+			xInitLeft = xInitRight = p3->x;
+
+
+			//prepare startingColor left and right
+			rL = rR = p3->r;
+			gL = gR = p3->g;
+			bL = bR = p3->b;
+			//prepare lerp increment
+			//lerp left
+			rLd = (splittingPoint.r - rL) / stepCount;
+			gLd = (splittingPoint.g - gL) / stepCount;
+			bLd = (splittingPoint.b - bL) / stepCount;
+			//lerp right
+			rRd = (p2->r - rR) / stepCount;
+			gRd = (p2->g - gR) / stepCount;
+			bRd = (p2->b - bR) / stepCount;
+
+			for (int i = 0; i <= stepCount; i++)
+			{
+				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), yCurrent, rL, gL, bL, rR, gR, bR);
+				//update left color
+				rL += rLd;
+				gL += gLd;
+				bL += bLd;
+				//update right color
+				rR += rRd;
+				gR += gRd;
+				bR += bRd;
+				//update row
+				yCurrent--;
+			}
+		}
+
+	}
+
 	printf("drawMeATriangle dont draw now \n");
 }
 
