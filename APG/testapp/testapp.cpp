@@ -693,25 +693,52 @@ void DrawTestScene0A(void)
     sglEnd();
   }
   */
-  sglAreaMode(SGL_FILL);
-  sglBegin(SGL_TRIANGLES);
-  sglColor3f(1.0f, 0.0f, 0.0f);
-  sglVertex2f(300, 300);
+  sglAreaMode(SGL_LINE);
+  sglBegin(SGL_POLYGON);
+  /*sglColor3f(1.0f, 0.0f, 0.0f);
+  sglVertex2f(200, 200);
   sglColor3f(0.0f, 1.0f, 0.0f);
-  sglVertex2f(350, 200);
+  sglVertex2f(200, 300);
   sglColor3f(0.0f, 0.0f, 1.0f);
-  sglVertex2f(400, 500);
+  sglVertex2f(300, 300);
+  sglColor3f(0.0f, 1.0f, 1.0f);
+  sglVertex2f(300, 200);*/
+
+
+  sglColor3f(1.0f, 0.0f, 0.0f);
+  sglVertex2f(200, 200);
+  sglColor3f(0.0f, 1.0f, 0.0f);
+  sglVertex2f(300, 400);
+  sglColor3f(0.0f, 0.0f, 1.0f);
+  sglVertex2f(400, 200);
+  sglColor3f(1.0f, 1.0f, 0.0f);
+  sglVertex2f(200, 300);
+  sglColor3f(0.0f, 1.0f, 1.0f);
+  sglVertex2f(400, 300); 
   sglEnd();
 
-  sglAreaMode(SGL_LINE);
-  sglBegin(SGL_TRIANGLES);
-  sglColor3f(1.0f, 0.0f, 0.0f);
-  sglVertex2f(300, 300);
+/*  sglColor3f(1.0f, 0.0f, 0.0f);
+  sglVertex2f(40, 40);
   sglColor3f(0.0f, 1.0f, 0.0f);
-  sglVertex2f(350, 200);
+  sglVertex2f(60, 80);
   sglColor3f(0.0f, 0.0f, 1.0f);
+  sglVertex2f(80, 40);
+  sglColor3f(1.0f, 1.0f, 0.0f);
+  sglVertex2f(40, 60);
+  sglColor3f(0.0f, 1.0f, 1.0f);
+  sglVertex2f(80, 60);
+  sglEnd();*/
+  /*
+  sglAreaMode(SGL_LINE);
+  sglBegin(SGL_POLYGON);
+  sglColor3f(1.0f, 0.0f, 0.0f);
   sglVertex2f(400, 500);
+  sglColor3f(0.0f, 1.0f, 0.0f);
+  sglVertex2f(300, 300);
+  sglColor3f(0.0f, 0.0f, 1.0f);
+  sglVertex2f(350, 200);
   sglEnd();
+  */
 
 
 

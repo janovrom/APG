@@ -7,6 +7,7 @@
 
 #include "sgl.h"
 #include "sglcontext.h"
+#include <limits>
 
 
 
@@ -658,8 +659,178 @@ struct polyEdge
 {
 	int Y_upper, Y_lower, X_cross;
 	float X_upper, X_step;
+	float Z_upper, Z_step;
 	polyEdge *next;
+
+	float R, G, B;
+	float RD, GD, BD;
 };
+
+void setPolyEdge(polyEdge *end, inputPoint4f *high, inputPoint4f *low)
+{
+	int stepCount;
+	float step;
+
+	end->Y_upper = high->y;
+	end->Y_lower = low->y - 1;
+	stepCount = end->Y_upper - end->Y_lower + 1;
+
+	step = (low->x - high->x) / (high->y - low->y);
+	end->X_step = step;
+	//printf("correction %f \n", ((float)(high->y) - (int)(high->y))*step);
+	end->X_upper = high->x + ((float)(high->y) - (int)(high->y))*step;
+	end->X_cross = end->X_upper;
+
+	end->R = high->r;
+	end->G = high->g;
+	end->B = high->b;
+
+	end->RD = (low->r - high->r) / stepCount;
+	end->GD = (low->g - high->g) / stepCount;
+	end->BD = (low->b - high->b) / stepCount;
+
+	end->Z_upper = high->z;
+	end->Z_step= (low->z - high->z) / stepCount;
+	/*
+	printf("\npolyEdge preparing\n");
+	printf("Yup %d Ylow %d \n", end->Y_upper, end->Y_lower);
+	printf("Xcro %d \n", end->X_cross);
+	printf("Xtrue %f Xstep %f \n", end->X_upper, end->X_step);
+	printf("polyEdge prepared\n\n");
+	*/
+}
+
+void listOrderByY_Upper(polyEdge *root, polyEdge *end)
+{
+	polyEdge *currentPred;
+	polyEdge *tempEdge1;
+	polyEdge *tempEdge2;
+	int changes = 1;
+	while (changes != 0)
+	{
+		changes = 0;
+		currentPred = root;
+		if (currentPred->next == end) { return; }
+		while (true)
+		{
+			if (currentPred->next->next == end){break;}
+			if (currentPred->next->Y_upper < currentPred->next->next->Y_upper)
+			{
+				tempEdge1 = currentPred->next;
+				tempEdge2 = tempEdge1->next;
+				currentPred->next = tempEdge2;
+				tempEdge1->next = tempEdge2->next;
+				tempEdge2->next = tempEdge1;
+				changes++;
+			}
+			currentPred = currentPred->next;
+		}
+	}
+}
+
+void printList(polyEdge *root, polyEdge *end)
+{
+	polyEdge *current;
+	current = root->next;
+	while (current != end)
+	{
+		printf("-----Yu %d Yl %d XC %d Xt %f S %f\n",current->Y_upper, current->Y_lower, current->X_cross, current->X_upper, current->X_step);
+		current = current->next;
+	}
+}
+
+void listOrderByX_Cross(polyEdge *root, polyEdge *end)
+{
+	polyEdge *currentPred;
+	polyEdge *tempEdge1;
+	polyEdge *tempEdge2;
+	int changes = 1;
+	while (changes != 0)
+	{
+		changes = 0;
+		currentPred = root;
+		if (currentPred->next == end) { return; }
+		while (true)
+		{
+			if (currentPred->next->next == end) { break; }
+			if (currentPred->next->X_cross > currentPred->next->next->X_cross)
+			{
+				tempEdge1 = currentPred->next;
+				tempEdge2 = tempEdge1->next;
+				currentPred->next = tempEdge2;
+				tempEdge1->next = tempEdge2->next;
+				tempEdge2->next = tempEdge1;
+				changes++;
+			}
+			currentPred = currentPred->next;
+		}
+	}
+}
+
+void listChangeList(polyEdge *rootNew, polyEdge *rootOld, polyEdge *endOld, int threshold)
+{
+	//polyEdge *currentPred;
+	polyEdge *current;
+	while (true)
+	{
+		current = rootOld->next;
+		if (current == endOld) { break; }
+		if (current->Y_upper >= threshold)
+		{
+			rootOld->next = current->next;
+			current->next = rootNew->next;
+			rootNew->next = current;
+		}else {
+			break;
+		}
+	}
+}
+
+void drawActiveList(polyEdge *root, polyEdge *end)
+{
+	if (root->next == end) { return; }
+	polyEdge *current = root;
+	polyEdge *first;
+	polyEdge *second;
+	while (current != end)
+	{
+		//
+		current = current->next;
+		first = current;
+		if (current == end) { break; }
+		current = current->next;
+		if (current == end) { break; }
+		second = current;
+		fillLine(first->X_cross, second->X_cross, first->Y_upper, first->R, first->G, first->B, second->R, second->G, second->B);
+	}
+}
+
+void listDecrementActiveAndRemove(polyEdge *root, polyEdge *end)
+{
+	polyEdge *currentPred = root;
+	polyEdge *current;
+	while (currentPred->next != end)
+	{
+		current = currentPred->next;
+		current->Y_upper--;
+		if (current->Y_upper >= current->Y_lower)
+		{
+			current->X_cross = current->X_upper += current->X_step;
+
+			current->R += current->RD;
+			current->G += current->GD;
+			current->B += current->BD;
+
+			current->Z_upper += current->Z_step;
+
+			currentPred = currentPred->next;
+		}
+		else {
+			currentPred->next = current->next;
+			delete current;
+		}
+	}
+}
 
 void drawMeAPolygon()
 {
@@ -672,10 +843,14 @@ void drawMeAPolygon()
 		drawLineLoop();
 		break;
 	case SGL_FILL:
-		polyEdge *root = new polyEdge;
-		polyEdge *end = root;
-		polyEdge *boundUpper;
-		polyEdge *boundLower;
+		int debugCount = 0;
+		polyEdge *rootActive = new polyEdge;
+		rootActive->next = new polyEdge;
+		polyEdge *endActive = rootActive->next;
+
+		polyEdge *rootPrepared = new polyEdge;
+		rootPrepared->next = new polyEdge;
+		polyEdge *endPrepared = rootPrepared->next;
 
 		inputPoint4f origin;
 		inputPoint4f *tempPoint1;
@@ -683,61 +858,114 @@ void drawMeAPolygon()
 
 		inputPoint4f pointStart;
 		inputPoint4f pointEnd;
+		
+		int top = -std::numeric_limits<int>::max();
+		int bottom = std::numeric_limits<int>::max();
+		//printf("limits - top %d bottom %d\n", top, bottom);
 
 		//store first point
 		tempPoint2 = queue4f.front();
+		transformThePoint(tempPoint2, *tempPoint2);
 		origin = *tempPoint2;
 		queue4f.pop();
 		int counter = 1;
-		float step;
+
+		//printf("ORIGIN %f %f\n",origin.x, origin.y);
 
 		//build polyEdges
 		while (!queue4f.empty())
 		{
 			tempPoint1 = tempPoint2;
 			tempPoint2 = queue4f.front();
+			transformThePoint(tempPoint2, *tempPoint2);
 			queue4f.pop();
 			counter++;
 
 			if (tempPoint1->y > tempPoint2->y)
 			{
-				end->next = new polyEdge;
-				end = end->next;
 
-				end->Y_upper = tempPoint1->y;
-				end->Y_lower = tempPoint2->y - 1;
+				//printf("POINT %f %f\n", tempPoint2->x, tempPoint2->y);
+				setPolyEdge(endPrepared, tempPoint1, tempPoint2);
 
-				step = (tempPoint2->x - tempPoint1->x) / (tempPoint2->y - tempPoint1->y);
-				end->X_step = step;
-				end->X_upper = tempPoint1->x - ((tempPoint1->x) + (int)(tempPoint1->x))*step;
-				end->X_cross = end->X_cross;
+				endPrepared->next = new polyEdge;
+				endPrepared = endPrepared->next;
 
-			}else if (tempPoint1->y > tempPoint2->y) {
-				end->next = new polyEdge;
-				end = end->next;
+				if (tempPoint1->y > top) { top = tempPoint1->y; }
+				if (tempPoint2->y < bottom) { bottom = tempPoint2->y; }
+				delete tempPoint1;
 
-				end->Y_upper = tempPoint2->y;
-				end->Y_lower = tempPoint1->y - 1;
+				debugCount++;
+			}else if (tempPoint2->y > tempPoint1->y) {
 
-				step = (tempPoint1->x - tempPoint2->x) / (tempPoint1->y - tempPoint2->y);
-				end->X_step = step;
-				end->X_upper = tempPoint2->x - ((tempPoint2->x) + (int)(tempPoint2->x))*step;
-				end->X_cross = end->X_cross;
+				//printf("POINT %f %f\n", tempPoint2->x, tempPoint2->y);
+				setPolyEdge(endPrepared, tempPoint2, tempPoint1);
 
+				endPrepared->next = new polyEdge;
+				endPrepared = endPrepared->next;
+
+				if (tempPoint2->y > top) { top = tempPoint2->y; }
+				if (tempPoint1->y < bottom) { bottom = tempPoint1->y; }
+				delete tempPoint1;
+
+				debugCount++;
 			}else {
 				continue;
 			}
-
-			delete tempPoint1;
 		}
 
-		//draw line from last point to first point
-		if (counter > 1)
+		//linal segment
+
+
+		if (tempPoint2->y > origin.y)
 		{
-			drawMeALine(tempPoint2, &origin);
-		}
-		delete tempPoint2;
+			setPolyEdge(endPrepared, tempPoint2, &origin);
+			delete tempPoint2;
 
+			endPrepared->next = new polyEdge;
+			endPrepared = endPrepared->next;
+			debugCount++;
+		}
+		else if (origin.y > tempPoint2->y) {
+			setPolyEdge(endPrepared, &origin, tempPoint2);
+			delete tempPoint2;
+
+			endPrepared->next = new polyEdge;
+			endPrepared = endPrepared->next;
+			debugCount++;
+		}
+		else {
+		}
+		//printf("\nDEBUG segments %d \n", debugCount);
+
+		//order tail
+		//printf("orderind\n");
+		listOrderByY_Upper(rootPrepared, endPrepared);
+		//printf("ordered\n");
+		//draw
+		//printf("drawing from %d to %d\n", top, bottom);
+		/*printf("\n");
+		printf("initialized lists start\n");
+		printList(rootActive, endActive);
+		printf("\n");
+		printList(rootPrepared, endPrepared);
+		printf("initialized lists end\n");*/
+		while (top >= bottom)
+		{
+
+			listDecrementActiveAndRemove(rootActive, endActive);
+			listChangeList(rootActive, rootPrepared, endPrepared, top);
+			listOrderByX_Cross(rootActive, endActive);
+			/*printf("top %d\n",top);
+			printf("lists start\n");
+			printList(rootActive, endActive);
+			printf("\n");
+			printList(rootPrepared, endPrepared);
+			printf("lists end\n");*/
+			
+			drawActiveList(rootActive, endActive);
+			top--;
+		}
+		//printf("drawn\n");
 
 		break;
 	}
@@ -843,7 +1071,8 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 	//drawPointNoTransform(splittingPoint);
 
 	int xInitLeft, xInitRight, yStart, yEnd, yCurrent, stepCount;
-	float stepXLeft, stepXRight;
+	float zInitLeft, zInitRight;
+	float stepXLeft, stepXRight, stepZLeft, stepZRight;
 
 	float rL, rR, gL, gR, bL, bR;
 	float rLd, rRd, gLd, gRd, bLd, bRd;
@@ -857,9 +1086,14 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 			yCurrent = yStart;
 			yEnd = p2->y;
 			stepCount = yStart - yEnd;
+
 			stepXLeft = (p2->x - p1->x) / stepCount;
 			stepXRight = (splittingPoint.x - p1->x) / stepCount;
 			xInitLeft = xInitRight = p1->x;
+
+			stepZLeft = (p2->z - p1->z) / stepCount;
+			stepZRight = (splittingPoint.z - p1->z) / stepCount;
+			zInitLeft = zInitRight = p1->z;
 
 
 			//prepare startingColor left and right
@@ -892,6 +1126,9 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 				bR += bRd;
 				//update row
 				yCurrent--;
+				//update depth
+				zInitLeft += stepZLeft;
+				zInitRight += stepZRight;
 			}
 		}
 
@@ -901,9 +1138,14 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 			yCurrent = yStart;
 			yEnd = p2->y;
 			stepCount = yEnd - yStart;
+
 			stepXLeft = (p2->x - p3->x) / stepCount;
 			stepXRight = (splittingPoint.x - p3->x) / stepCount;
 			xInitLeft = xInitRight = p3->x;
+
+			stepZLeft = (p2->z - p3->z) / stepCount;
+			stepZRight = (splittingPoint.z - p3->z) / stepCount;
+			zInitLeft = zInitRight = p3->z;
 
 
 			//prepare startingColor left and right
@@ -933,6 +1175,9 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 				bR += bRd;
 				//update row
 				yCurrent++;
+				//update depth
+				zInitLeft += stepZLeft;
+				zInitRight += stepZRight;
 			}
 		}
 	}else {
@@ -943,9 +1188,14 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 			yCurrent = yStart;
 			yEnd = splittingPoint.y;
 			stepCount = yStart - yEnd;
+
 			stepXLeft = (splittingPoint.x - p1->x) / stepCount;
 			stepXRight = (p2->x - p1->x) / stepCount;
 			xInitLeft = xInitRight = p1->x;
+
+			stepZLeft = (splittingPoint.z - p1->z) / stepCount;
+			stepZRight = (p2->z - p1->z) / stepCount;
+			zInitLeft = zInitRight = p1->z;
 
 
 			//prepare startingColor left and right
@@ -978,6 +1228,8 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 				bR += bRd;
 				//update row
 				yCurrent--;
+				zInitLeft += stepZLeft;
+				zInitRight += stepZRight;
 			}
 		}
 
@@ -987,9 +1239,14 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 			yCurrent = yStart;
 			yEnd = splittingPoint.y;
 			stepCount = yEnd - yStart;
+
 			stepXLeft = (splittingPoint.x - p3->x) / stepCount;
 			stepXRight = (p2->x - p3->x) / stepCount;
 			xInitLeft = xInitRight = p3->x;
+
+			stepZLeft = (splittingPoint.z - p3->z) / stepCount;
+			stepZRight = (p2->z - p3->z) / stepCount;
+			zInitLeft = zInitRight = p3->z;
 
 
 			//prepare startingColor left and right
@@ -1019,6 +1276,8 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 				bR += bRd;
 				//update row
 				yCurrent++;
+				zInitLeft += stepZLeft;
+				zInitRight += stepZRight;
 			}
 		}
 
