@@ -50,6 +50,7 @@ inline void drawPixel(int offsetC, int offsetD, float z, float r, float g, float
 		*(colorBuffer + offsetC) = r;
 		*(colorBuffer + offsetC + 1) = g;
 		*(colorBuffer + offsetC + 2) = b;
+		//printf("depth %d %d %f \n", offsetD, offsetC, z);
 		*(depthBuffer + offsetD) = z;
 	}
 }
@@ -323,6 +324,7 @@ void drawMeAPoint(inputPoint4f* point)
 			{
 				offset = j*W * 3 + i * 3;
 				offsetD = j*W + i;
+				//printf("drawMeAPoint\n");
 				drawPixel(offset, offsetD,
 						  output.z,
 						  output.r,
@@ -363,10 +365,15 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 	int x0, x1, y0, y1;
 	float k;
 
+	float z0, z1, dz;
+
 	x0 = startT.x;
 	y0 = startT.y;
 	x1 = endT.x;
 	y1 = endT.y;
+
+	z0 = startT.z;
+	z1 = endT.z;
 
 
 	int endValue;
@@ -383,7 +390,12 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 			swap = y0;
 			y0 = y1;
 			y1 = swap;
+
+			swap = z0;
+			z0 = z1;
+			z1 = swap;
 		}
+		dz = (z1 - z0) / (x1 - x0);
 		k = (float)(y1 - y0) / (x1 - x0);
 		endValue = x1 - x0;
 		for (int i = 0; i <= endValue; i++){
@@ -396,8 +408,9 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 			{
 				offset = tempY*W * 3 + tempX*3;
 				int offsetD = tempY*W + tempX;
+				//printf("line naive X\n");
 				drawPixel(offset, offsetD,
-						  z,
+						  z0,
 						  (lerpValue)*startT.r + (1 - lerpValue)*endT.r,
 						  (lerpValue)*startT.g + (1 - lerpValue)*endT.g,
 						  (lerpValue)*startT.b + (1 - lerpValue)*endT.b,
@@ -406,6 +419,7 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 				//*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
 				//*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
 			}
+			z0 += dz;
 		}
 	}else {
 		//y sampling
@@ -419,7 +433,12 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 			swap = y0;
 			y0 = y1;
 			y1 = swap;
+
+			swap = z0;
+			z0 = z1;
+			z1 = swap;
 		}
+		dz = (z1 - z0) / (y1 - y0);
 		k = (float)(x1 - x0) / (y1 - y0);
 		endValue = y1 - y0;
 		for (int i = 0; i <= endValue; i++) {
@@ -430,10 +449,11 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 
 			if (tempX >= 0 && tempX < W && tempY >= 0 && tempY < H)
 			{
+				//printf("line naive Y\n");
 				offset = tempY*W * 3 + tempX * 3;
 				int offsetD = tempY*W + tempX;
 				drawPixel(offset, offsetD,
-						  z,
+						  z0,
 						  (lerpValue)*startT.r + (1 - lerpValue)*endT.r,
 						  (lerpValue)*startT.g + (1 - lerpValue)*endT.g,
 						  (lerpValue)*startT.b + (1 - lerpValue)*endT.b,
@@ -442,6 +462,7 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 				//*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
 				//*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
 			}
+			z0 += dz;
 		}
 	}
 	//printf("IMPLEMENT ME: sgl.cpp -> drawMeALine \n");
@@ -531,8 +552,9 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 		{
 			offset = y0*W * 3 + x0 * 3;
 			int offsetD = x0*W + y0;
+			//printf("line bress X init\n");
 			drawPixel(offset, offsetD,
-					  z,
+					  startT.z,
 					  startT.r,
 					  startT.g,
 					  startT.b,
@@ -548,8 +570,9 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 		{
 			offset = x0*W * 3 + y0 * 3;
 			int offsetD = x0*W + y0;
+			//printf("line bress Y init\n");
 			drawPixel(offset, offsetD,
-					  z,
+				      startT.z,
 					  startT.r,
 					  startT.g,
 					  startT.b,
@@ -577,9 +600,10 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 			if (tempX >= 0 && tempX < W && tempY >= 0 && tempY < H)
 			{
 				offset = tempY*W * 3 + tempX * 3;
-				int offsetD = tempX*W + tempY;
+				int offsetD = tempY*W + tempX;
+				//printf("line bress X\n");
 				drawPixel(offset, offsetD,
-						  z,
+					      (1 - lerpValue)*startT.z + (lerpValue)*endT.z,
 						  (1 - lerpValue)*startT.r + (lerpValue)*endT.r,
 						  (1 - lerpValue)*startT.g + (lerpValue)*endT.g,
 						  (1 - lerpValue)*startT.b + (lerpValue)*endT.b,
@@ -594,8 +618,9 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 			{
 				offset = tempX*W * 3 + tempY * 3;
 				int offsetD = tempX*W + tempY;
+				//printf("line bress Y\n");
 				drawPixel(offset, offsetD,
-						  z,
+					      (1 - lerpValue)*startT.z + (lerpValue)*endT.z,
 						  (1 - lerpValue)*startT.r + (lerpValue)*endT.r,
 						  (1 - lerpValue)*startT.g + (lerpValue)*endT.g,
 						  (1 - lerpValue)*startT.b + (lerpValue)*endT.b,
@@ -610,7 +635,7 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 
 }
 
-void fillLine(int xStart, int xEnd, int row, float colRStart, float colGStart, float colBStart, float colREnd, float colGEnd, float colBEnd, float zStart, float zEnd)
+void fillLine(int xStart, int xEnd, float zStart, float zEnd, int row, float colRStart, float colGStart, float colBStart, float colREnd, float colGEnd, float colBEnd)
 {
 
 	int W, H;
@@ -624,12 +649,13 @@ void fillLine(int xStart, int xEnd, int row, float colRStart, float colGStart, f
 	float lerpValue = 0;
 	float lerpAdd = 1.0f / (xEnd - xStart);
 	int offsetC = y + 3*xStart;
-	int offsetD = (y*W + xStart);
+	int offsetD = (row*W + xStart);
 
 	for (int x = xStart; x <= xEnd; x++)
 	{
 		if (x >= 0 && x < W && row >= 0 && row < H)
 		{
+			//printf("fill\n");
 			drawPixel(offsetC, offsetD, 
 					  (1 - lerpValue)*zStart + (lerpValue)*zEnd,
 					  (1 - lerpValue)*colRStart + (lerpValue)*colREnd, 
@@ -792,7 +818,7 @@ void drawActiveList(polyEdge *root, polyEdge *end)
 		current = current->next;
 		if (current == end) { break; }
 		second = current;
-		fillLine(first->X_cross, second->X_cross, first->Y_upper, first->R, first->G, first->B, second->R, second->G, second->B);
+		fillLine(first->X_cross, second->X_cross, first->Z_upper, second->Z_upper, first->Y_upper, first->R, first->G, first->B, second->R, second->G, second->B);
 	}
 }
 
@@ -1106,7 +1132,7 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 			{
 				//setPixel((int)(xInitLeft + i * stepXLeft), yCurrent, rL, gL, bL);
 				//setPixel((int)(xInitRight + i * stepXRight), yCurrent, rR, gR, bR);
-				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), yCurrent, rL, gL, bL, rR, gR, bR);
+				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), zInitLeft, zInitRight, yCurrent, rL, gL, bL, rR, gR, bR);
 				//update left color
 				rL += rLd;
 				gL += gLd;
@@ -1155,7 +1181,7 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 
 			for (int i = 0; i <= stepCount; i++)
 			{
-				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), yCurrent, rL, gL, bL, rR, gR, bR);
+				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), zInitLeft, zInitRight, yCurrent, rL, gL, bL, rR, gR, bR);
 				//update left color
 				rL += rLd;
 				gL += gLd;
@@ -1206,9 +1232,7 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 
 			for (int i = 0; i <= stepCount; i++)
 			{
-				setPixel((int)(xInitLeft + i * stepXLeft), yCurrent, rL, gL, bL);
-				setPixel((int)(xInitRight + i * stepXRight), yCurrent, rR, gR, bR);
-				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), yCurrent, rL, gL, bL, rR, gR, bR);
+				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), zInitLeft, zInitRight, yCurrent, rL, gL, bL, rR, gR, bR);
 				//update left color
 				rL += rLd;
 				gL += gLd;
@@ -1256,7 +1280,7 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 
 			for (int i = 0; i <= stepCount; i++)
 			{
-				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), yCurrent, rL, gL, bL, rR, gR, bR);
+				fillLine((int)(xInitLeft + i * stepXLeft), (int)(xInitRight + i * stepXRight), zInitLeft, zInitRight, yCurrent, rL, gL, bL, rR, gR, bR);
 				//update left color
 				rL += rLd;
 				gL += gLd;
@@ -1637,6 +1661,7 @@ inline void setPixel(float x0, float y0, float r, float g, float b, float z)
 	{
 		int offsetC = (y*W + x) * 3;
 		int offsetD = (y*W + x);
+		//printf("setPixel\n");
 		drawPixel(offsetC, offsetD, z, r, g, b, colorBuffer, cont->getDepthBuffer());
 	}
 }
