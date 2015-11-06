@@ -683,15 +683,15 @@ void drawMeAPolygon()
 
 		inputPoint4f pointStart;
 		inputPoint4f pointEnd;
-		/*
+
 		//store first point
-		if (queue4f.empty()) { return; }
 		tempPoint2 = queue4f.front();
 		origin = *tempPoint2;
 		queue4f.pop();
 		int counter = 1;
+		float step;
 
-		//draw lines form first point to last point
+		//build polyEdges
 		while (!queue4f.empty())
 		{
 			tempPoint1 = tempPoint2;
@@ -699,7 +699,34 @@ void drawMeAPolygon()
 			queue4f.pop();
 			counter++;
 
-			root->next = new polyEdge;
+			if (tempPoint1->y > tempPoint2->y)
+			{
+				end->next = new polyEdge;
+				end = end->next;
+
+				end->Y_upper = tempPoint1->y;
+				end->Y_lower = tempPoint2->y - 1;
+
+				step = (tempPoint2->x - tempPoint1->x) / (tempPoint2->y - tempPoint1->y);
+				end->X_step = step;
+				end->X_upper = tempPoint1->x - ((tempPoint1->x) + (int)(tempPoint1->x))*step;
+				end->X_cross = end->X_cross;
+
+			}else if (tempPoint1->y > tempPoint2->y) {
+				end->next = new polyEdge;
+				end = end->next;
+
+				end->Y_upper = tempPoint2->y;
+				end->Y_lower = tempPoint1->y - 1;
+
+				step = (tempPoint1->x - tempPoint2->x) / (tempPoint1->y - tempPoint2->y);
+				end->X_step = step;
+				end->X_upper = tempPoint2->x - ((tempPoint2->x) + (int)(tempPoint2->x))*step;
+				end->X_cross = end->X_cross;
+
+			}else {
+				continue;
+			}
 
 			delete tempPoint1;
 		}
@@ -710,7 +737,8 @@ void drawMeAPolygon()
 			drawMeALine(tempPoint2, &origin);
 		}
 		delete tempPoint2;
-		*/
+
+
 		break;
 	}
 	printf("drawMeAPolygon dont draw now \n");
