@@ -609,7 +609,7 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 
 }
 
-void fillLine(int xStart, int xEnd, int row, float colRStart, float colGStart, float colBStart, float colREnd, float colGEnd, float colBEnd)
+void fillLine(int xStart, int xEnd, int row, float colRStart, float colGStart, float colBStart, float colREnd, float colGEnd, float colBEnd, float zStart, float zEnd)
 {
 
 	int W, H;
@@ -623,14 +623,14 @@ void fillLine(int xStart, int xEnd, int row, float colRStart, float colGStart, f
 	float lerpValue = 0;
 	float lerpAdd = 1.0f / (xEnd - xStart);
 	int offsetC = y + 3*xStart;
-	int offsetD = (y*W + x);
+	int offsetD = (y*W + xStart);
 
 	for (int x = xStart; x <= xEnd; x++)
 	{
 		if (x >= 0 && x < W && row >= 0 && row < H)
 		{
 			drawPixel(offsetC, offsetD, 
-					  z, 
+					  (1 - lerpValue)*zStart + (lerpValue)*zEnd,
 					  (1 - lerpValue)*colRStart + (lerpValue)*colREnd, 
 					  (1 - lerpValue)*colGStart + (lerpValue)*colGEnd, 
 					  (1 - lerpValue)*colBStart + (lerpValue)*colBEnd, 
