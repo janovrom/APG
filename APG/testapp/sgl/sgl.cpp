@@ -16,7 +16,8 @@
 
 using namespace std;
 
-void setPixel(float x0, float y0, float r, float g, float b);
+inline void drawPixel(int offsetC, int offsetD, float z, float r, float g, float b, float *colorBuffer, float *depthBuffer);
+inline void setPixel(float x0, float y0, float r, float g, float b, float z);
 void drawMeALine(inputPoint4f* start, inputPoint4f* end);
 void drawPoints();
 void drawLineStrip();
@@ -29,6 +30,27 @@ static inline void setErrCode(sglEErrorCode c)
 {
   if(_libStatus==SGL_NO_ERROR)
     _libStatus = c;
+}
+
+inline void drawPixel(int offsetC, int offsetD, float z, float r, float g, float b, float *colorBuffer, float *depthBuffer)
+{
+	if (testDepth == true)
+	{
+		if (*(depthBuffer + offsetD) > z)
+		{
+			*(colorBuffer + offsetC) = r;
+			*(colorBuffer + offsetC + 1) = g;
+			*(colorBuffer + offsetC + 2) = b;
+			*(depthBuffer + offsetD) = z;
+		}
+	}
+	else
+	{
+		*(colorBuffer + offsetC) = r;
+		*(colorBuffer + offsetC + 1) = g;
+		*(colorBuffer + offsetC + 2) = b;
+		*(depthBuffer + offsetD) = z;
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -230,6 +252,15 @@ void transformThePoint(inputPoint4f* point, inputPoint4f& output)
 	if (hasBegun) {
 		// for convenience, matrices are multiplied only once in sglEnd
 		multiplyMatrixVector(multipliedMatrix, point, output);
+		// perspective divide
+		output.x = output.x / output.w;
+		output.y = output.y / output.w;
+		output.z = output.z / output.w;
+		output.w = 1.0f;
+		// viewport multiplication
+		output.x = output.x * viewportMatrix[0] + viewportMatrix[12];
+		output.y = output.y * viewportMatrix[5] + viewportMatrix[13];
+		output.z = output.z * viewportMatrix[10] + viewportMatrix[14];
 	}
 	else {
 		// there is no sglBegin nor sglEnd, we can't be sure, where new 
@@ -237,111 +268,19 @@ void transformThePoint(inputPoint4f* point, inputPoint4f& output)
 		inputPoint4f tmp(*point);
 		multiplyMatrixVector(modelViewStack.top(), point, output);
 		multiplyMatrixVector(projectionStack.top(), &output, tmp);
-		multiplyMatrixVector(viewportMatrix, &tmp, output);
+		// perspective divide
+		output.x = tmp.x / tmp.w;
+		output.y = tmp.y / tmp.w;
+		output.z = tmp.z / tmp.w;
+		output.w = 1.0f;
+		// viewport multiplication
+		output.x = output.x * viewportMatrix[0] + viewportMatrix[12];
+		output.y = output.y * viewportMatrix[5] + viewportMatrix[13];
+		output.z = output.z * viewportMatrix[10] + viewportMatrix[14];
+		//multiplyMatrixVector(viewportMatrix, &tmp, output);
 	}
 	// there should be perspective divide
 }
-
-// HERE UNUSED CODE STARTS
-void transformScaleAndRotation(inputPoint4f* point, inputPoint4f& output) {
-	float *mat = modelViewStack.top();
-	output.x = mat[0] * point->x + mat[4] * point->y + mat[8] * point->z;
-	output.y = mat[1] * point->x + mat[5] * point->y + mat[9] * point->z;
-	output.z = mat[2] * point->x + mat[6] * point->y + mat[10] * point->z;
-}
-
-void invertTransformPoint(inputPoint4f* point, inputPoint4f& output) {
-	if (!invertedForObject) {
-		invertMatrix(viewportMatrix, inversedViewportMatrix);
-		invertMatrix(projectionStack.top(), inversedProjectionMatrix);
-		invertedForObject = true;
-	}
-	inputPoint4f tmp(*point);
-	inputPoint4f tmp2(*point);
-	multiplyMatrixVector(inversedViewportMatrix, point, tmp);
-	multiplyMatrixVector(inversedProjectionMatrix, &tmp, tmp2);
-	transformThePoint(&tmp2, output);
-}
-
-void transformPointModelView(inputPoint4f* point, inputPoint4f& output)
-{
-	multiplyMatrixVector(modelViewStack.top(), point, output);
-	//inputPoint4f tmp (point);
-	//multiplyMatrixVector(modelViewStack.top(), point, tmp);
-	//multiplyMatrixVector(projectionStack.top(), tmp, output);
-}
-
-void drawPointNoTransform (inputPoint4f& point) {
-	int W, H, x, y;
-
-	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
-	W = cont->getWidth();
-	H = cont->getHeight();
-	x = (int)round(point.x);
-	y = (int)round(point.y);
-
-	float *colorBuffer = cont->getColorBuffer();
-
-	int offset;
-
-	int size = (int)((pointSize - 1) / 2);
-	int sizeCorrection = 1 - (int)pointSize % 2;
-
-	for (int i = x - size; i <= x + (size + sizeCorrection); i++)
-	{
-		for (int j = y - size; j <= y + (size + sizeCorrection); j++)
-		{
-			if (i >= 0 && i < W && j >= 0 && j < H)
-			{
-				offset = j*W * 3 + i * 3;
-				*(colorBuffer + offset) = point.r;
-				*(colorBuffer + offset + 1) = point.g;
-				*(colorBuffer + offset + 2) = point.b;
-}
-		}
-	}
-}
-
-void drawPointRotatedAndScaled(inputPoint4f* point)
-{
-	inputPoint4f output;
-	output.r = point->r;
-	output.g = point->g;
-	output.b = point->b;
-	output.a = point->a;
-	transformScaleAndRotation(point, output);
-
-	int W, H, x, y;
-
-	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
-	W = cont->getWidth();
-	H = cont->getHeight();
-	x = (int)round(output.x);
-	y = (int)round(output.y);
-
-	float *colorBuffer = cont->getColorBuffer();
-
-	int offset;
-
-	int size = (int)((pointSize - 1) / 2);
-	int sizeCorrection = 1 - (int)pointSize % 2;
-
-	for (int i = x - size; i <= x + (size + sizeCorrection); i++)
-	{
-		for (int j = y - size; j <= y + (size + sizeCorrection); j++)
-		{
-			if (i >= 0 && i < W && j >= 0 && j < H)
-			{
-				offset = j*W * 3 + i * 3;
-				*(colorBuffer + offset) = output.r;
-				*(colorBuffer + offset + 1) = output.g;
-				*(colorBuffer + offset + 2) = output.b;
-			}
-		}
-	}
-
-}
-// HERE UNUSED CODE ENDS
 
 /**
 Method to draw point of specific size. Point is centered to middle (for odd size) with added right and bottom line (for even size).
@@ -367,7 +306,7 @@ void drawMeAPoint(inputPoint4f* point)
 
 	float *colorBuffer = cont->getColorBuffer();
 
-	int offset;
+	int offset, offsetD;
 
 	//count size of pixel and right-bottom correction for even size.
 	int size = (int)((pointSize-1) / 2);
@@ -382,9 +321,16 @@ void drawMeAPoint(inputPoint4f* point)
 			if (i >= 0 && i < W && j >= 0 && j < H)
 			{
 				offset = j*W * 3 + i * 3;
-				*(colorBuffer + offset) = output.r;
-				*(colorBuffer + offset + 1) = output.g;
-				*(colorBuffer + offset + 2) = output.b;
+				offsetD = j*W + i;
+				drawPixel(offset, offsetD,
+						  output.z,
+						  output.r,
+						  output.g,
+						  output.b,
+						  colorBuffer, cont->getDepthBuffer());
+				//*(colorBuffer + offset) = output.r;
+				//*(colorBuffer + offset + 1) = output.g;
+				//*(colorBuffer + offset + 2) = output.b;
 			}
 		}
 	}
@@ -448,10 +394,16 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 			if (tempX >= 0 && tempX < W && tempY >= 0 && tempY < H)
 			{
 				offset = tempY*W * 3 + tempX*3;
-
-				*(colorBuffer + offset) = (lerpValue)*startT.r + (1-lerpValue)*endT.r;
-				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
-				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
+				int offsetD = tempY*W + tempX;
+				drawPixel(offset, offsetD,
+						  z,
+						  (lerpValue)*startT.r + (1 - lerpValue)*endT.r,
+						  (lerpValue)*startT.g + (1 - lerpValue)*endT.g,
+						  (lerpValue)*startT.b + (1 - lerpValue)*endT.b,
+						  colorBuffer, cont->getDepthBuffer());
+				//*(colorBuffer + offset) = (lerpValue)*startT.r + (1-lerpValue)*endT.r;
+				//*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
+				//*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
 			}
 		}
 	}else {
@@ -478,10 +430,16 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 			if (tempX >= 0 && tempX < W && tempY >= 0 && tempY < H)
 			{
 				offset = tempY*W * 3 + tempX * 3;
-
-				*(colorBuffer + offset) = (lerpValue)*startT.r + (1 - lerpValue)*endT.r;
-				*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
-				*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
+				int offsetD = tempY*W + tempX;
+				drawPixel(offset, offsetD,
+						  z,
+						  (lerpValue)*startT.r + (1 - lerpValue)*endT.r,
+						  (lerpValue)*startT.g + (1 - lerpValue)*endT.g,
+						  (lerpValue)*startT.b + (1 - lerpValue)*endT.b,
+						  colorBuffer, cont->getDepthBuffer());
+				//*(colorBuffer + offset) = (lerpValue)*startT.r + (1 - lerpValue)*endT.r;
+				//*(colorBuffer + offset + 1) = (lerpValue)*startT.g + (1 - lerpValue)*endT.g;
+				//*(colorBuffer + offset + 2) = (lerpValue)*startT.b + (1 - lerpValue)*endT.b;
 			}
 		}
 	}
@@ -571,10 +529,16 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 		if (x0 >= 0 && x0 < W && y0 >= 0 && y0 < H)
 		{
 			offset = y0*W * 3 + x0 * 3;
-
-			*(colorBuffer + offset) = startT.r;
-			*(colorBuffer + offset + 1) = startT.g;
-			*(colorBuffer + offset + 2) = startT.b;
+			int offsetD = x0*W + y0;
+			drawPixel(offset, offsetD,
+					  z,
+					  startT.r,
+					  startT.g,
+					  startT.b,
+					  colorBuffer, cont->getDepthBuffer());
+			//*(colorBuffer + offset) = startT.r;
+			//*(colorBuffer + offset + 1) = startT.g;
+			//*(colorBuffer + offset + 2) = startT.b;
 		}
 
 		}
@@ -582,10 +546,16 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 		if (y0 >= 0 && y0 < W && x0 >= 0 && x0 < H)
 		{
 			offset = x0*W * 3 + y0 * 3;
-
-			*(colorBuffer + offset) = startT.r;
-			*(colorBuffer + offset + 1) = startT.g;
-			*(colorBuffer + offset + 2) = startT.b;
+			int offsetD = x0*W + y0;
+			drawPixel(offset, offsetD,
+					  z,
+					  startT.r,
+					  startT.g,
+					  startT.b,
+					  colorBuffer, cont->getDepthBuffer());
+			//*(colorBuffer + offset) = startT.r;
+			//*(colorBuffer + offset + 1) = startT.g;
+			//*(colorBuffer + offset + 2) = startT.b;
 		}
 	}
 
@@ -606,20 +576,33 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 			if (tempX >= 0 && tempX < W && tempY >= 0 && tempY < H)
 			{
 				offset = tempY*W * 3 + tempX * 3;
-
-				*(colorBuffer + offset) = (1-lerpValue)*startT.r + (lerpValue)*endT.r;
-				*(colorBuffer + offset + 1) = (1-lerpValue)*startT.g + (lerpValue)*endT.g;
-				*(colorBuffer + offset + 2) = (1-lerpValue)*startT.b + (lerpValue)*endT.b;
+				int offsetD = tempX*W + tempY;
+				drawPixel(offset, offsetD,
+						  z,
+						  (1 - lerpValue)*startT.r + (lerpValue)*endT.r,
+						  (1 - lerpValue)*startT.g + (lerpValue)*endT.g,
+						  (1 - lerpValue)*startT.b + (lerpValue)*endT.b,
+						  colorBuffer, cont->getDepthBuffer());
+				//*(colorBuffer + offset) = (1-lerpValue)*startT.r + (lerpValue)*endT.r;
+				//*(colorBuffer + offset + 1) = (1-lerpValue)*startT.g + (lerpValue)*endT.g;
+				//*(colorBuffer + offset + 2) = (1-lerpValue)*startT.b + (lerpValue)*endT.b;
 			}
 
 		}else{
 			if (tempY >= 0 && tempY < W && tempX >= 0 && tempX < H)
 			{
 				offset = tempX*W * 3 + tempY * 3;
+				int offsetD = tempX*W + tempY;
+				drawPixel(offset, offsetD,
+						  z,
+						  (1 - lerpValue)*startT.r + (lerpValue)*endT.r,
+						  (1 - lerpValue)*startT.g + (lerpValue)*endT.g,
+						  (1 - lerpValue)*startT.b + (lerpValue)*endT.b,
+						  colorBuffer, cont->getDepthBuffer());
 
-				*(colorBuffer + offset) = (1 - lerpValue)*startT.r + (lerpValue)*endT.r;
-				*(colorBuffer + offset + 1) = (1 - lerpValue)*startT.g + (lerpValue)*endT.g;
-				*(colorBuffer + offset + 2) = (1 - lerpValue)*startT.b + (lerpValue)*endT.b;
+				//*(colorBuffer + offset) = (1 - lerpValue)*startT.r + (lerpValue)*endT.r;
+				//*(colorBuffer + offset + 1) = (1 - lerpValue)*startT.g + (lerpValue)*endT.g;
+				//*(colorBuffer + offset + 2) = (1 - lerpValue)*startT.b + (lerpValue)*endT.b;
 			}
 		}
 	}
@@ -639,17 +622,25 @@ void fillLine(int xStart, int xEnd, int row, float colRStart, float colGStart, f
 
 	float lerpValue = 0;
 	float lerpAdd = 1.0f / (xEnd - xStart);
-	int offset = y + 3*xStart;
+	int offsetC = y + 3*xStart;
+	int offsetD = (y*W + x);
 
 	for (int x = xStart; x <= xEnd; x++)
 	{
 		if (x >= 0 && x < W && row >= 0 && row < H)
 		{
-			*(colorBuffer + offset) = (1-lerpValue)*colRStart + (lerpValue)*colREnd;
-			*(colorBuffer + offset + 1) = (1 - lerpValue)*colGStart + (lerpValue)*colGEnd;
-			*(colorBuffer + offset + 2) = (1 - lerpValue)*colBStart + (lerpValue)*colBEnd;
+			drawPixel(offsetC, offsetD, 
+					  z, 
+					  (1 - lerpValue)*colRStart + (lerpValue)*colREnd, 
+					  (1 - lerpValue)*colGStart + (lerpValue)*colGEnd, 
+					  (1 - lerpValue)*colBStart + (lerpValue)*colBEnd, 
+					  colorBuffer, cont->getDepthBuffer());
+			//*(colorBuffer + offset) = (1-lerpValue)*colRStart + (lerpValue)*colREnd;
+			//*(colorBuffer + offset + 1) = (1 - lerpValue)*colGStart + (lerpValue)*colGEnd;
+			//*(colorBuffer + offset + 2) = (1 - lerpValue)*colBStart + (lerpValue)*colBEnd;
 		}
-		offset += 3;
+		offsetC += 3;
+		offsetD += 1;
 		lerpValue += lerpAdd;
 	}
 }
@@ -1233,17 +1224,21 @@ void sglEnd(void)
 	// so there is no need to compute multiplication every time, it is computed once here
 	copyMatrix(multipliedMatrix, identityMatrix);
 	// creates viewport (and there should be perspective divide)
-	multipliedMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
+	/*multipliedMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
 	multipliedMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
 	multipliedMatrix[10] = 0.5f;
 	multipliedMatrix[12] = (viewportWidth / 2.0f) + viewportOffsetX;
 	multipliedMatrix[13] = (viewportHeight / 2.0f) + viewportOffsetY;
-	multipliedMatrix[14] = 0.5f;
-	copyMatrix(viewportMatrix, multipliedMatrix);
+	multipliedMatrix[14] = 0.5f;*/
+	copyMatrix(viewportMatrix, identityMatrix);
+	viewportMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
+	viewportMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
+	viewportMatrix[10] = 0.5f;
+	viewportMatrix[12] = (viewportWidth / 2.0f) + viewportOffsetX;
+	viewportMatrix[13] = (viewportHeight / 2.0f) + viewportOffsetY;
+	viewportMatrix[14] = 0.5f;
 	multiplyMatrix(multipliedMatrix, projectionStack.top());
 	multiplyMatrix(multipliedMatrix, modelViewStack.top());
-
-	invertMatrix(viewportMatrix, inversedViewportMatrix);
 
 	switch (drawingMethod)
 	{
@@ -1331,73 +1326,42 @@ void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
 	point.x = x + xs;
 	point.y = y + ys;
 	//drawPointNoTransform(point);
-	setPixel(point.x,point.y, point.r, point.g, point.b);
+	setPixel(point.x,point.y, point.r, point.g, point.b, point.z);
 
 	point.x = xs - x;
 	//drawPointNoTransform(point);
-	setPixel(point.x, point.y, point.r, point.g, point.b);
+	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 
 	point.y = ys - y;
 	//drawPointNoTransform(point);
-	setPixel(point.x, point.y, point.r, point.g, point.b);
+	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 
 	point.x = x + xs;
 	//drawPointNoTransform(point);
-	setPixel(point.x, point.y, point.r, point.g, point.b);
+	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 	
 	point.x = y + xs;
 	point.y = x + ys;
 	//drawPointNoTransform(point);
-	setPixel(point.x, point.y, point.r, point.g, point.b);
+	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 
 	point.x = xs - y;
 	//drawPointNoTransform(point);
-	setPixel(point.x, point.y, point.r, point.g, point.b);
+	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 
 	point.y = ys - x;
 	//drawPointNoTransform(point);
-	setPixel(point.x, point.y, point.r, point.g, point.b);
+	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 
 	point.x = y + xs;
 	//drawPointNoTransform(point);
-	setPixel(point.x, point.y, point.r, point.g, point.b);
+	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 }
-
-// HERE UNUSED CODE STARTS
-void setSymPointsModified(int x, int y, int xs, int ys, inputPoint4f& point) {
-	point.x = x + xs;
-	point.y = y + ys;
-	drawPointNoTransform(point);
-
-	point.x = xs - x;
-	drawPointNoTransform(point);
-
-	point.y = ys - y;
-	drawPointNoTransform(point);
-
-	point.x = x + xs;
-	drawPointNoTransform(point);
-	/*
-	point.x = y + xs;
-	point.y = x + ys;
-	drawPointNoTransform(point);
-
-	point.x = xs - y;
-	drawPointNoTransform(point);
-
-	point.y = ys - x;
-	drawPointNoTransform(point);
-
-	point.x = y + xs;
-	drawPointNoTransform(point);
-	*/
-}
-// HERE UNUSED CODE ENDS
 
 /**
 Method to set single pixel in color buffer to specific color. (always size 1*1)
 */
-void setPixel(float x0, float y0, float r, float g, float b)
+inline void setPixel(float x0, float y0, float r, float g, float b, float z)
 {
 	int W, H, x, y;
 
@@ -1412,10 +1376,9 @@ void setPixel(float x0, float y0, float r, float g, float b)
 
 	if (x >= 0 && x < W && y >= 0 && y < H)
 	{
-		int offset = (y*W + x) * 3;
-		*(colorBuffer + offset) = r;
-		*(colorBuffer + offset + 1) = g;
-		*(colorBuffer + offset + 2) = b;
+		int offsetC = (y*W + x) * 3;
+		int offsetD = (y*W + x);
+		drawPixel(offsetC, offsetD, z, r, g, b, colorBuffer, cont->getDepthBuffer());
 	}
 }
 
@@ -1530,10 +1493,10 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 
 	while (stopY <= stopX)
 	{
-		setPixel(x + tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB);
-		setPixel(x - tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB);
-		setPixel(x + tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB);
-		setPixel(x - tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB);
+		setPixel(x + tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB, output.z);
+		setPixel(x - tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB, output.z);
+		setPixel(x + tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB, output.z);
+		setPixel(x - tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB, output.z);
 		tempX++;
 		error -= b2 * (tempX - 1);
 		stopY += b2;
@@ -1553,10 +1516,10 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 
 	while (stopY >= stopX)
 	{
-		setPixel(x + tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB);
-		setPixel(x - tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB);
-		setPixel(x + tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB);
-		setPixel(x - tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB);
+		setPixel(x + tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB, output.z);
+		setPixel(x - tempX, y + tempY, colorVertexR, colorVertexG, colorVertexB, output.z);
+		setPixel(x + tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB, output.z);
+		setPixel(x - tempX, y - tempY, colorVertexR, colorVertexG, colorVertexB, output.z);
 		tempY++;
 		error -= a2 * (tempY - 1);
 		stopX += a2;
@@ -1612,117 +1575,11 @@ void sglEllipseSegmented(float x, float y, float z, float a, float b)
 
 }
 
-/**
-Bresenham's algorithm for drawing ellipses.
-@param x untranslated position of point
-@param y untranslated position of point
-@param xs center of circle
-@param ys center of circle
-@param a horizontal squish
-@param b vertical squish
-*/
-void sglEllipseFirst(float x, float y, float z, float a, float b) {
-	invertedForObject = false;
-	if (contextWrapper.empty() || hasBegun) {
-		setErrCode(SGL_INVALID_OPERATION);
-		return;
-	}
-	int psize = pointSize;
-	pointSize = 1;
-
-	if (a < 0 || b < 0) {
-		setErrCode(SGL_INVALID_VALUE);
-		return;
-	}
-
-	float scaleFactor = sqrt(multipliedMatrix[0] * multipliedMatrix[5] - multipliedMatrix[1] * multipliedMatrix[4]);
-	a *= scaleFactor;
-	b *= scaleFactor;
-
-	inputPoint4f point;
-	point.x = x;
-	point.y = y;
-	point.z = 0;
-	point.w = 1;
-	point.r = colorVertexR;
-	point.g = colorVertexG;
-	point.b = colorVertexB;
-	point.a = 0;
-
-	inputPoint4f output;
-	transformThePoint(&point, output);
-	x = output.x;
-	y = output.y;
-
-	int a2 = a * a;
-	int b2 = b * b;
-	int fa2 = 4 * a2, fb2 = 4 * b2;
-	float xp, yp, sigma;
-
-	/* first half */
-	for (xp = 0, yp = b, sigma = 2 * b2 + a2*(1 - 2 * b); b2*xp <= a2*yp; xp++)
-	{
-		point.x = xp + x;
-		point.y = yp + y;
-		drawPointRotatedAndScaled(&point);
-		//drawPointNoTransform(point);
-
-		point.y = y - yp;
-		drawPointRotatedAndScaled(&point);
-		//drawPointNoTransform(point);
-
-		point.x = x - xp;
-		drawPointRotatedAndScaled(&point);
-		//drawPointNoTransform(point);
-
-		point.y = y + yp;
-		drawPointRotatedAndScaled(&point);
-		//drawPointNoTransform(point);
-		if (sigma >= 0)
-		{
-			sigma += fa2 * (1 - yp);
-			yp--;
-		}
-		sigma += b2 * ((4 * xp) + 6);
-	}
-
-	/* second half */
-	for (xp = a, yp = 0, sigma = 2 * a2 + b2*(1 - 2 * a); a2*yp <= b2*xp; yp++)
-	{
-		point.x = xp + x;
-		point.y = yp + y;
-		drawPointRotatedAndScaled(&point);
-		//drawPointNoTransform(point);
-
-		point.y = y - yp;
-		drawPointRotatedAndScaled(&point);
-		//drawPointNoTransform(point);
-
-		point.x = x - xp;
-		drawPointRotatedAndScaled(&point);
-		//drawPointNoTransform(point);
-
-		point.y = y + yp;
-		drawPointRotatedAndScaled(&point);
-		//drawPointNoTransform(point);
-		if (sigma >= 0)
-		{
-			sigma += fb2 * (1 - xp);
-			xp--;
-		}
-		sigma += a2 * ((4 * yp) + 6);
-	}
-
-	pointSize = psize;
-}
-
 void sglEllipse(float x, float y, float z, float a, float b) {
 	#ifdef ELLIPSE
 	sglEllipseSegmented(x, y, z, a, b);
 	#elif ELLIPSE_SECOND
 		sglEllipseSecond(x, y, z, a, b);
-	#else
-		sglEllipseFirst(x, y, z, a, b);
 	#endif
 	
 }
@@ -1743,28 +1600,28 @@ void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f *point, float 
 	if (y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point->x, point->y, point->r, point->g, point->b);
+		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
 	point->x = xs - x;
 	angle = acos(-x / radius);
 	if (y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point->x, point->y, point->r, point->g, point->b);
+		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
 	point->y = ys - y;
 	angle = acos(-x / radius);
 	if (-y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point->x, point->y, point->r, point->g, point->b);
+		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
 	point->x = x + xs;
 	angle = acos(x / radius);
 	if (-y < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point->x, point->y, point->r, point->g, point->b);
+		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
 	point->x = y + xs;
 	point->y = x + ys;
@@ -1772,32 +1629,31 @@ void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f *point, float 
 	if (x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point->x, point->y, point->r, point->g, point->b);
+		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
 	point->x = xs - y;
 	angle = acos(-y / radius);
 	if (x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point->x, point->y, point->r, point->g, point->b);
+		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
 	point->y = ys - x;
 	angle = acos(-y / radius);
 	if (-x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point->x, point->y, point->r, point->g, point->b);
+		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
 	point->x = y + xs;
 	angle = acos(y / radius);
 	if (-x < 0)
 		angle = -angle + 2 * 3.14159274;
 	if (angle >= from && angle <= to)
-		setPixel(point->x, point->y, point->r, point->g, point->b);
+		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 }
 
 void sglArc(float x, float y, float z, float radius, float from, float to) {
-	invertedForObject = false;
 	if (hasBegun) {
 		setErrCode(SGL_INVALID_OPERATION);
 		return;
@@ -1836,58 +1692,6 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 		printf("No Arc filling algorithm implemented right now. \n");
 		break;
 	}
-
-	// per pixel arc, but didn't figure how to rotate
-	/*
-	while (from >= 2 * 3.14159274)
-		from -= 2 * 3.14159274;
-
-	while (to >= 2 * 3.14159274)
-		to -= 2 * 3.14159274;
-
-	if (from < 0.00001f)
-		from = 0;
-
-	if (to < 0.00001f)
-		to = 0;
-
-	float scaleFactor = sqrt(multipliedMatrix[0] * multipliedMatrix[5] - multipliedMatrix[1] * multipliedMatrix[4]);
-	radius *= scaleFactor;
-	
-	inputPoint4f point;
-	point.x = x;
-	point.y = y;
-	point.z = 0;
-	point.w = 1;
-	point.r = colorVertexR;
-	point.g = colorVertexG;
-	point.b = colorVertexB;
-	point.a = 0;
-
-	inputPoint4f output;
-	transformThePoint(&point, output);
-	x = output.x;
-	y = output.y;
-
-	float xp, yp, p;
-	xp = 0;
-	yp = radius;
-	p = 3 - 2 * radius;
-	//printf("drawing from %f to %f at [%f, %f] \n",from, to, x, y);
-	while (xp < yp) {
-		setSymPointsLimit(xp, yp, x, y, &point, radius, from, to);
-		if (p < 0) {
-			p = p + 4 * xp + 6;
-		}
-		else {
-			p = p + 4 * (xp - yp) + 10;
-			--yp;
-		}
-		++xp;
-	}
-	if (xp == yp)
-		setSymPointsLimit(xp, yp, x, y, &point, radius, from, to);
-		*/
 }
 
 //---------------------------------------------------------------------------
@@ -2136,12 +1940,6 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
 	ortho[12] = - (right + left) / (right - left);
 	ortho[13] = - (top + bottom) / (top - bottom);
 	ortho[14] = -(far + near) / (far - near);
-	/*for (int i = 0; i < 4; i++) {
-		printf("\n");
-		for (int j = i; j < 16; j += 4) {
-			printf("%f ", ortho[j]);
-		}
-	}*/
 	switch (matrixMode) {
 	case SGL_MODELVIEW:
 		multiplyMatrix(modelViewStack.top(), ortho);
