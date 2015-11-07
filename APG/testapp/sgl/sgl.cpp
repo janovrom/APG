@@ -244,7 +244,7 @@ void sglBegin(sglEElementType mode)
 
 /*
 Transforms input point - model, view, projection and viewport.
-Input point is preserved and transformation is returned in its copy.
+Input point is preserved and transformation is returned in output.
 @param point input point to transform
 @param output where transformed point is stored
 */
