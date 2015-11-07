@@ -331,6 +331,9 @@ void DrawTestScene2C(void)
 
   sglAreaMode(SGL_FILL);
 
+  //sglClearColor(1, 0, 0, 0);
+  //sglClear(SGL_DEPTH_BUFFER_BIT);
+
   // upper row with depth test
   sglEnable(SGL_DEPTH_TEST);
   placeCube(-1,2,0);

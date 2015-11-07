@@ -43,6 +43,10 @@ inline void drawPixel(int offsetC, int offsetD, float z, float r, float g, float
 			*(colorBuffer + offsetC + 1) = g;
 			*(colorBuffer + offsetC + 2) = b;
 			*(depthBuffer + offsetD) = z;
+			//printf("%f\n",z);
+		}
+		else {
+			//printf("wrong depth: current %f written %f\n",*(colorBuffer + offsetC));
 		}
 	}
 	else
@@ -269,14 +273,17 @@ void sglClear(unsigned what) {
 		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
+	bool noOperation = true;
 
 	if ((what & SGL_COLOR_BUFFER_BIT) == SGL_COLOR_BUFFER_BIT) {
 			contextWrapper[contextWrapper.activeContext]->clearColor(colorClearR, colorClearG, colorClearB );
+			noOperation = false;
 	}
-	else if ((what & SGL_DEPTH_BUFFER_BIT) == SGL_DEPTH_BUFFER_BIT) {
+	if ((what & SGL_DEPTH_BUFFER_BIT) == SGL_DEPTH_BUFFER_BIT) {
 			contextWrapper[contextWrapper.activeContext]->clearDepth();
+			noOperation = false;
 	}
-	else {
+	if(noOperation) {
 			setErrCode(SGL_INVALID_VALUE);
 	}
 }
@@ -307,7 +314,7 @@ void transformThePointAndCopyColor(inputPoint4f* point, inputPoint4f& output)
 {
 	// test if between sglBegin and sglEnd
 	if (hasBegun) {
-		printf("TRANSFORMING ----- has begun\n");
+		//printf("TRANSFORMING ----- has begun\n");
 		// for convenience, matrices are multiplied only once in sglEnd
 		multiplyMatrixVector(multipliedMatrix, point, output);
 		// perspective divide
@@ -321,7 +328,7 @@ void transformThePointAndCopyColor(inputPoint4f* point, inputPoint4f& output)
 		output.z = output.z * viewportMatrix[10] + viewportMatrix[14];
 	}
 	else {
-		printf("TRANSFORMING ----- outside begin-end\n");
+		//printf("TRANSFORMING ----- outside begin-end\n");
 		// there is no sglBegin nor sglEnd, we can't be sure, where new 
 		// transformation will appear so it needs to be done every time
 		inputPoint4f tmp(*point);
@@ -893,7 +900,8 @@ void listDecrementActiveAndRemove(polyEdge *root, polyEdge *end)
 		current->Y_upper--;
 		if (current->Y_upper >= current->Y_lower)
 		{
-			current->X_cross = current->X_upper += current->X_step;
+			current->X_upper += current->X_step;
+			current->X_cross = current->X_upper;
 
 			current->R += current->RD;
 			current->G += current->GD;
