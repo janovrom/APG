@@ -86,6 +86,7 @@ void multiplyMatrix(float* left, const float* right) {
 }
 
 float viewportMatrix[16];
+float matrixMVP[16];
 float multipliedMatrix[16];
 
 /**

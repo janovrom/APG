@@ -26,8 +26,8 @@
 #endif
 
 #ifdef TEST2
-//#define TEST_2A
-#define TEST_2B
+#define TEST_2A
+//#define TEST_2B
 //#define TEST_2C
 //#define TEST_2D
 #endif
@@ -331,8 +331,8 @@ void DrawTestScene2C(void)
 
   sglAreaMode(SGL_FILL);
 
-  //sglClearColor(1, 0, 0, 0);
-  //sglClear(SGL_DEPTH_BUFFER_BIT);
+  sglClearColor(1, 0, 0, 0);
+  sglClear(SGL_DEPTH_BUFFER_BIT);
 
   // upper row with depth test
   sglEnable(SGL_DEPTH_TEST);
@@ -906,7 +906,7 @@ void DrawTestScene1A(void)
   offsety = 6;
 
   sglColor3f(1,1,0);
-  sglAreaMode(SGL_FILL);
+  sglAreaMode(SGL_LINE);
   for(float rr=r/5; rr<=r; rr+=r/5) {
     sglCircle(offsetx-1,offsety,0,0.5*rr);
     sglCircle(offsetx+3,offsety,0,1.5*rr);

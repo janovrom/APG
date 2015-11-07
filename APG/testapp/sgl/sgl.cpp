@@ -197,7 +197,7 @@ float *sglGetColorBufferPointer(void) {
 	return contextWrapper[contextWrapper.activeContext]->getColorBuffer();
 }
 
-// DEBUG CODE STARTS (You shall not delete it again!!!)
+// DEBUG CODE STARTS (You shall not delete it again!!!) - I SHALL!
 void drawPointNoTransform(inputPoint4f& point) {
 	int W, H, x, y;
 
@@ -229,6 +229,7 @@ void drawPointNoTransform(inputPoint4f& point) {
 	}
 }
 
+// THIS DEBUG METHOD DOES NOT DO A DEPTH TEST
 void setPixel(float x0, float y0, float r, float g, float b)
 {
 	int W, H, x, y;
@@ -316,7 +317,7 @@ void transformThePointAndCopyColor(inputPoint4f* point, inputPoint4f& output)
 	if (hasBegun) {
 		//printf("TRANSFORMING ----- has begun\n");
 		// for convenience, matrices are multiplied only once in sglEnd
-		multiplyMatrixVector(multipliedMatrix, point, output);
+		multiplyMatrixVector(matrixMVP, point, output);
 		// perspective divide
 		output.x = output.x / output.w;
 		output.y = output.y / output.w;
@@ -349,7 +350,6 @@ void transformThePointAndCopyColor(inputPoint4f* point, inputPoint4f& output)
 	output.g = point->g;
 	output.b = point->b;
 	output.a = point->a;
-	// there should be perspective divide
 }
 
 /**
@@ -1075,6 +1075,10 @@ void drawMeAPolygon()
 			drawActiveList(rootActive, endActive);
 			top--;
 		}
+		delete endPrepared;
+		delete rootActive;
+		delete endActive;
+		delete rootPrepared;
 		//printf("drawn\n");
 
 		break;
@@ -1602,7 +1606,7 @@ void sglEnd(void)
 	if (!hasBegun) { setErrCode(SGL_INVALID_OPERATION); return; }
 
 	// so there is no need to compute multiplication every time, it is computed once here
-	copyMatrix(multipliedMatrix, identityMatrix);
+	copyMatrix(matrixMVP, identityMatrix);
 	// creates viewport (and there should be perspective divide)
 	/*multipliedMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
 	multipliedMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
@@ -1617,8 +1621,11 @@ void sglEnd(void)
 	viewportMatrix[12] = (viewportWidth / 2.0f) + viewportOffsetX;
 	viewportMatrix[13] = (viewportHeight / 2.0f) + viewportOffsetY;
 	viewportMatrix[14] = 0.5f;
-	multiplyMatrix(multipliedMatrix, projectionStack.top());
-	multiplyMatrix(multipliedMatrix, modelViewStack.top());
+	multiplyMatrix(matrixMVP, projectionStack.top());
+	multiplyMatrix(matrixMVP, modelViewStack.top());
+
+	copyMatrix(multipliedMatrix, viewportMatrix);
+	multiplyMatrix(multipliedMatrix, matrixMVP);
 
 	switch (drawingMethod)
 	{
@@ -1796,7 +1803,7 @@ void sglCircle(float x, float y, float z, float radius) {
 
 	float scaleFactor = sqrt(multipliedMatrix[0] * multipliedMatrix[5] - multipliedMatrix[1] * multipliedMatrix[4]);
 	//printf("radius %f scalefactor %f \n", radius, scaleFactor);
-	scaleFactor = 100;
+	//scaleFactor = 100;
 	radius *= scaleFactor;
 
 	inputPoint4f point;
@@ -1885,7 +1892,7 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 		return;
 	}
 
-	float scaleFactor = sqrt(multipliedMatrix[0] * multipliedMatrix[5] - multipliedMatrix[1] * multipliedMatrix[4]);
+	float scaleFactor = sqrt(matrixMVP[0] * matrixMVP[5] - matrixMVP[1] * matrixMVP[4]);
 	a *= scaleFactor;
 	b *= scaleFactor;
 
@@ -2399,7 +2406,7 @@ void sglFrustum(float left, float right, float bottom, float top, float near, fl
 
 	float A = (right + left) / (right - left);
 	float B = (top + bottom) / (top - bottom);
-	float C = (far + near) / (far - near);
+	float C = -(far + near) / (far - near);
 	float D = - 2.0f * far * near / (far - near);
 
 	float persp[16];
