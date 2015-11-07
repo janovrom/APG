@@ -26,8 +26,8 @@
 #endif
 
 #ifdef TEST2
-//#define TEST_2A
-#define TEST_2B
+#define TEST_2A
+//#define TEST_2B
 //#define TEST_2C
 //#define TEST_2D
 #endif

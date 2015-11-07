@@ -308,10 +308,7 @@ void transformThePointAndCopyColor(inputPoint4f* point, inputPoint4f& output)
 	// test if between sglBegin and sglEnd
 	if (hasBegun) {
 		// for convenience, matrices are multiplied only once in sglEnd
-		float temp1, temp2, temp3;
-		//printf("pre %f %f %f %f \n", point->x, point->y, point->z, point->w);
 		multiplyMatrixVector(multipliedMatrix, point, output);
-		//printf("pre %f %f %f %f \n", point->x, point->y, point->z, point->w);
 		// perspective divide
 		output.x = output.x / output.w;
 		output.y = output.y / output.w;
