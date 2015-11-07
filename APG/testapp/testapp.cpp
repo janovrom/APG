@@ -21,13 +21,13 @@
 
 #ifdef TEST1
 #define TEST_1A
-#define TEST_1B
-#define TEST_1C
+//#define TEST_1B
+//#define TEST_1C
 #endif
 
 #ifdef TEST2
-#define TEST_2A
-//#define TEST_2B
+//#define TEST_2A
+#define TEST_2B
 //#define TEST_2C
 //#define TEST_2D
 #endif
@@ -398,7 +398,8 @@ void DrawTestScene2B()
   sglLoadIdentity();
 
   sglTranslate(1.5,0,0);
-
+  sglClearColor(0.0f,0,0,1);
+  sglClear(_contexts[4]);
   float r;
   // circles
   for(r=1.2; r>0.1; r-=0.1) {
@@ -456,6 +457,9 @@ void DrawTestScene2A(void)
   sglMatrixMode(SGL_MODELVIEW);
   sglLoadIdentity();
 
+  //sglClearColor(1, 0, 0,0);
+  //sglClear(sglGetContext());
+
   sglColor3f(1,0,0);
   sglAreaMode(SGL_FILL);
   butterfly();
@@ -465,7 +469,6 @@ void DrawTestScene2A(void)
 
   sglColor3f(0,1,1);
   sglAreaMode(SGL_FILL);
-
   sglTranslate(4,0,0);
   sglRotate2D(1,0,0);
   butterfly();
@@ -693,8 +696,6 @@ void DrawTestScene0A(void)
     sglEnd();
   }
   */
-  sglAreaMode(SGL_LINE);
-  sglBegin(SGL_POLYGON);
   /*sglColor3f(1.0f, 0.0f, 0.0f);
   sglVertex2f(200, 200);
   sglColor3f(0.0f, 1.0f, 0.0f);
@@ -704,7 +705,24 @@ void DrawTestScene0A(void)
   sglColor3f(0.0f, 1.0f, 1.0f);
   sglVertex2f(300, 200);*/
 
+  sglAreaMode(SGL_FILL);
+  sglBegin(SGL_TRIANGLES);
+  sglColor3f(1.0f, 0.0f, 0.0f);
+  sglVertex2f(100, 100);
+  sglColor3f(0.0f, 1.0f, 0.0f);
+  sglVertex2f(200, 100);
+  sglColor3f(0.0f, 0.0f, 1.0f);
+  sglVertex2f(150, 150);
+  sglColor3f(1.0f, 1.0f, 0.0f);
+  sglVertex2f(200, 100);
+  sglColor3f(0.0f, 1.0f, 1.0f);
+  sglVertex2f(250, 150);
+  sglColor3f(1.0f, 0.0f, 1.0f);
+  sglVertex2f(300, 100);
+  sglEnd();
 
+  /*sglAreaMode(SGL_FILL);
+  sglBegin(SGL_POLYGON);
   sglColor3f(1.0f, 0.0f, 0.0f);
   sglVertex2f(200, 200);
   sglColor3f(0.0f, 1.0f, 0.0f);
@@ -715,7 +733,7 @@ void DrawTestScene0A(void)
   sglVertex2f(200, 300);
   sglColor3f(0.0f, 1.0f, 1.0f);
   sglVertex2f(400, 300); 
-  sglEnd();
+  sglEnd();*/
 
 /*  sglColor3f(1.0f, 0.0f, 0.0f);
   sglVertex2f(40, 40);
