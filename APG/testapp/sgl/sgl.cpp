@@ -43,6 +43,10 @@ inline void drawPixel(int offsetC, int offsetD, float z, float r, float g, float
 			*(colorBuffer + offsetC + 1) = g;
 			*(colorBuffer + offsetC + 2) = b;
 			*(depthBuffer + offsetD) = z;
+			//printf("%f\n",z);
+		}
+		else {
+			//printf("wrong depth: current %f written %f\n",*(colorBuffer + offsetC));
 		}
 	}
 	else
@@ -193,6 +197,61 @@ float *sglGetColorBufferPointer(void) {
 	return contextWrapper[contextWrapper.activeContext]->getColorBuffer();
 }
 
+// DEBUG CODE STARTS (You shall not delete it again!!!)
+void drawPointNoTransform(inputPoint4f& point) {
+	int W, H, x, y;
+
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
+	W = cont->getWidth();
+	H = cont->getHeight();
+	x = (int)round(point.x);
+	y = (int)round(point.y);
+
+	float *colorBuffer = cont->getColorBuffer();
+
+	int offset;
+
+	int size = (int)((pointSize - 1) / 2);
+	int sizeCorrection = 1 - (int)pointSize % 2;
+
+	for (int i = x - size; i <= x + (size + sizeCorrection); i++)
+	{
+		for (int j = y - size; j <= y + (size + sizeCorrection); j++)
+		{
+			if (i >= 0 && i < W && j >= 0 && j < H)
+			{
+				offset = j*W * 3 + i * 3;
+				*(colorBuffer + offset) = point.r;
+				*(colorBuffer + offset + 1) = point.g;
+				*(colorBuffer + offset + 2) = point.b;
+			}
+		}
+	}
+}
+
+void setPixel(float x0, float y0, float r, float g, float b)
+{
+	int W, H, x, y;
+
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
+	W = cont->getWidth();
+	H = cont->getHeight();
+	x = round(x0);
+	y = round(y0);
+
+	float *colorBuffer = cont->getColorBuffer();
+	//printf("drawing: %d %d\n", x, y);
+
+	if (x >= 0 && x < W && y >= 0 && y < H)
+	{
+		int offset = (y*W + x) * 3;
+		*(colorBuffer + offset) = r;
+		*(colorBuffer + offset + 1) = g;
+		*(colorBuffer + offset + 2) = b;
+	}
+}
+// DEBUG CODE ENDS
+
 //---------------------------------------------------------------------------
 // Drawing functions
 //---------------------------------------------------------------------------
@@ -214,14 +273,17 @@ void sglClear(unsigned what) {
 		setErrCode(SGL_INVALID_OPERATION);
 		return;
 	}
+	bool noOperation = true;
 
 	if ((what & SGL_COLOR_BUFFER_BIT) == SGL_COLOR_BUFFER_BIT) {
 			contextWrapper[contextWrapper.activeContext]->clearColor(colorClearR, colorClearG, colorClearB );
+			noOperation = false;
 	}
-	else if ((what & SGL_DEPTH_BUFFER_BIT) == SGL_DEPTH_BUFFER_BIT) {
+	if ((what & SGL_DEPTH_BUFFER_BIT) == SGL_DEPTH_BUFFER_BIT) {
 			contextWrapper[contextWrapper.activeContext]->clearDepth();
+			noOperation = false;
 	}
-	else {
+	if(noOperation) {
 			setErrCode(SGL_INVALID_VALUE);
 	}
 }
@@ -248,10 +310,11 @@ Input point is preserved and transformation is returned in output.
 @param point input point to transform
 @param output where transformed point is stored
 */
-void transformThePoint(inputPoint4f* point, inputPoint4f& output)
+void transformThePointAndCopyColor(inputPoint4f* point, inputPoint4f& output)
 {
 	// test if between sglBegin and sglEnd
 	if (hasBegun) {
+		//printf("TRANSFORMING ----- has begun\n");
 		// for convenience, matrices are multiplied only once in sglEnd
 		multiplyMatrixVector(multipliedMatrix, point, output);
 		// perspective divide
@@ -265,6 +328,7 @@ void transformThePoint(inputPoint4f* point, inputPoint4f& output)
 		output.z = output.z * viewportMatrix[10] + viewportMatrix[14];
 	}
 	else {
+		//printf("TRANSFORMING ----- outside begin-end\n");
 		// there is no sglBegin nor sglEnd, we can't be sure, where new 
 		// transformation will appear so it needs to be done every time
 		inputPoint4f tmp(*point);
@@ -281,6 +345,10 @@ void transformThePoint(inputPoint4f* point, inputPoint4f& output)
 		output.z = output.z * viewportMatrix[10] + viewportMatrix[14];
 		//multiplyMatrixVector(viewportMatrix, &tmp, output);
 	}
+	output.r = point->r;
+	output.g = point->g;
+	output.b = point->b;
+	output.a = point->a;
 	// there should be perspective divide
 }
 
@@ -291,11 +359,11 @@ void drawMeAPoint(inputPoint4f* point)
 {
 	//transform point
 	inputPoint4f output;
-	output.r = point->r;
+	/*output.r = point->r;
 	output.g = point->g;
 	output.b = point->b;
-	output.a = point->a;
-	transformThePoint(point, output);
+	output.a = point->a;*/
+	transformThePointAndCopyColor(point, output);
 
 	//get color buffer and its properties
 	int W, H, x, y;
@@ -355,12 +423,12 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 	startT.r = start->r;
 	startT.g = start->g;
 	startT.b = start->b;
-	transformThePoint(start, startT);
+	transformThePointAndCopyColor(start, startT);
 	inputPoint4f endT;
 	endT.r = end->r;
 	endT.g = end->g;
 	endT.b = end->b;
-	transformThePoint(end, endT);
+	transformThePointAndCopyColor(end, endT);
 
 	int x0, x1, y0, y1;
 	float k;
@@ -486,12 +554,12 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 	startT.r = start->r;
 	startT.g = start->g;
 	startT.b = start->b;
-	transformThePoint(start, startT);
+	transformThePointAndCopyColor(start, startT);
 	inputPoint4f endT;
 	endT.r = end->r;
 	endT.g = end->g;
 	endT.b = end->b;
-	transformThePoint(end, endT);
+	transformThePointAndCopyColor(end, endT);
 
 	//setup variables to work with
 	x0 = (startT).x;
@@ -551,7 +619,7 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 		if (x0 >= 0 && x0 < W && y0 >= 0 && y0 < H)
 		{
 			offset = y0*W * 3 + x0 * 3;
-			int offsetD = x0*W + y0;
+			int offsetD = y0*W + x0;
 			//printf("line bress X init\n");
 			drawPixel(offset, offsetD,
 					  startT.z,
@@ -689,13 +757,13 @@ void setPolyEdge(polyEdge *end, inputPoint4f *high, inputPoint4f *low)
 	float step;
 
 	end->Y_upper = high->y;
-	end->Y_lower = low->y - 1;
+	end->Y_lower = low->y + 1;
 	stepCount = end->Y_upper - end->Y_lower + 1;
 
 	step = (low->x - high->x) / (high->y - low->y);
 	end->X_step = step;
 	//printf("correction %f \n", ((float)(high->y) - (int)(high->y))*step);
-	end->X_upper = high->x + ((float)(high->y) - (int)(high->y))*step;
+	end->X_upper = high->x;// +((float)(high->y) - (int)(high->y))*step;
 	end->X_cross = end->X_upper;
 
 	end->R = high->r;
@@ -832,7 +900,8 @@ void listDecrementActiveAndRemove(polyEdge *root, polyEdge *end)
 		current->Y_upper--;
 		if (current->Y_upper >= current->Y_lower)
 		{
-			current->X_cross = current->X_upper += current->X_step;
+			current->X_upper += current->X_step;
+			current->X_cross = current->X_upper;
 
 			current->R += current->RD;
 			current->G += current->GD;
@@ -873,6 +942,8 @@ void drawMeAPolygon()
 		inputPoint4f *tempPoint1;
 		inputPoint4f *tempPoint2;
 
+		inputPoint4f *tempTempPoint;
+
 		inputPoint4f pointStart;
 		inputPoint4f pointEnd;
 		
@@ -881,8 +952,19 @@ void drawMeAPolygon()
 		//printf("limits - top %d bottom %d\n", top, bottom);
 
 		//store first point
-		tempPoint2 = queue4f.front();
-		transformThePoint(tempPoint2, *tempPoint2);
+		tempTempPoint = queue4f.front();
+		tempPoint2 = new inputPoint4f();
+		transformThePointAndCopyColor(tempTempPoint, *tempPoint2);
+		delete tempTempPoint;
+		
+		/*tempPoint2 = queue4f.front();
+		transformThePointAndCopyColor(tempPoint2, *tempPoint2);*/
+
+		//DEBUG
+		/*sglPointSize(5);
+		drawPointNoTransform(*tempPoint2);*/
+		//DEBUG ENDS
+
 		origin = *tempPoint2;
 		queue4f.pop();
 		int counter = 1;
@@ -893,12 +975,23 @@ void drawMeAPolygon()
 		while (!queue4f.empty())
 		{
 			tempPoint1 = tempPoint2;
-			tempPoint2 = queue4f.front();
-			transformThePoint(tempPoint2, *tempPoint2);
+			tempPoint2 = new inputPoint4f();
+			tempTempPoint = queue4f.front();
+			transformThePointAndCopyColor(tempTempPoint, *tempPoint2);
+			delete tempTempPoint;
+
+			//DEBUG
+			/*sglPointSize(5);
+			drawPointNoTransform(*tempPoint2);*/
+			//DEBUG ENDS
+
 			queue4f.pop();
 			counter++;
 
-			if (tempPoint1->y > tempPoint2->y)
+			int tempInt1 = tempPoint1->y;
+			int tempInt2 = tempPoint2->y;
+
+			if (tempInt1 > tempInt2)
 			{
 
 				//printf("POINT %f %f\n", tempPoint2->x, tempPoint2->y);
@@ -912,7 +1005,7 @@ void drawMeAPolygon()
 				delete tempPoint1;
 
 				debugCount++;
-			}else if (tempPoint2->y > tempPoint1->y) {
+			}else if (tempInt2 > tempInt1) {
 
 				//printf("POINT %f %f\n", tempPoint2->x, tempPoint2->y);
 				setPolyEdge(endPrepared, tempPoint2, tempPoint1);
@@ -930,7 +1023,7 @@ void drawMeAPolygon()
 			}
 		}
 
-		//linal segment
+		//final segment
 
 
 		if (tempPoint2->y > origin.y)
@@ -986,26 +1079,29 @@ void drawMeAPolygon()
 
 		break;
 	}
-	printf("drawMeAPolygon dont draw now \n");
+	//printf("drawMeAPolygon dont draw now \n");
 }
 
 void drawMeATriangleLineLoop(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 {
-	printf("drawTriangleLineLoop not implemented yet! \n Transformation of points is still missing\n");
+	//printf("drawTriangleLineLoop not implemented yet! \n Transformation of points is still missing\n");
 
 	drawMeALine(v1, v2);
 	drawMeALine(v2, v3);
 	drawMeALine(v3, v1);
 }
 
-void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
+void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 {
-	printf("trianglePrinting \n");
+	//printf("trianglePrinting \n");
 	inputPoint4f *p1, *p2, *p3;
+	inputPoint4f *v1 = new inputPoint4f();
+	inputPoint4f *v2 = new inputPoint4f();
+	inputPoint4f *v3 = new inputPoint4f();
 
-	transformThePoint(v1, *v1);
-	transformThePoint(v2, *v2);
-	transformThePoint(v3, *v3);
+	transformThePointAndCopyColor(t1, *v1);
+	transformThePointAndCopyColor(t2, *v2);
+	transformThePointAndCopyColor(t3, *v3);
 	
 	
 	//order points
@@ -1297,8 +1393,9 @@ void drawMeATriangle(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 		}
 
 	}
+	delete v1, v2, v3;
 
-	printf("drawMeATriangle not implemented yet! \n Transformation of points is still missing\n");
+	//printf("drawMeATriangle not implemented yet! \n Transformation of points is still missing\n");
 }
 
 void drawTriangles()
@@ -1642,6 +1739,26 @@ void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
 }
 
 /**
+Used in Bresenham's algorithm for drawing circle. One point is copied on 8
+different places. Modified for filling.
+@param x untranslated position of point
+@param y untranslated position of point
+@param xs center of circle
+@param ys center of circle
+@param point input point with stored colors
+*/
+void setSymPointsFillLine(int x, int y, int xs, int ys, float z, inputPoint4f& point) {
+	float r = point.r;
+	float g = point.g;
+	float b = point.b;
+	//printf("x %d y %d ||| XS %d XE %d Y %d \n",xs, ys, xs -x, xs + x, ys + y);
+	fillLine(xs - x, xs + x, z, z, ys + y, r, g, b, r, g, b);
+	fillLine(xs - x, xs + x, z, z, ys - y, r, g, b, r, g, b);
+	fillLine(xs - y, xs + y, z, z, ys - x, r, g, b, r, g, b);
+	fillLine(xs - y, xs + y, z, z, ys + x, r, g, b, r, g, b);
+}
+
+/**
 Method to set single pixel in color buffer to specific color. (always size 1*1)
 */
 inline void setPixel(float x0, float y0, float r, float g, float b, float z)
@@ -1678,12 +1795,14 @@ void sglCircle(float x, float y, float z, float radius) {
 	}
 
 	float scaleFactor = sqrt(multipliedMatrix[0] * multipliedMatrix[5] - multipliedMatrix[1] * multipliedMatrix[4]);
+	//printf("radius %f scalefactor %f \n", radius, scaleFactor);
+	scaleFactor = 100;
 	radius *= scaleFactor;
 
 	inputPoint4f point;
 	point.x = x;
 	point.y = y;
-	point.z = 0;
+	point.z = z;
 	point.w = 1;
 	point.r = colorVertexR;
 	point.g = colorVertexG;
@@ -1691,10 +1810,12 @@ void sglCircle(float x, float y, float z, float radius) {
 	point.a = 0;
 
 	inputPoint4f output;
-	transformThePoint(&point, output);
+	transformThePointAndCopyColor(&point, output);
 	x = output.x;
 	y = output.y;
+	z = output.z;
 
+	int xp, yp, p;
 	switch (areaMode)
 	{
 	case SGL_POINT:
@@ -1704,10 +1825,11 @@ void sglCircle(float x, float y, float z, float radius) {
 		break;
 	case SGL_LINE:
 		// Bresenham's algorithm for drawing circle
-		int xp, yp, p;
+		//printf("circle line\n");
 		xp = 0;
 		yp = radius;
 		p = 3 - 2 * radius;
+			//printf("%f %f \n", xp, yp);
 		while (xp < yp) {
 			setSymPoints(xp, yp, x, y, point);
 			if (p < 0) {
@@ -1724,7 +1846,25 @@ void sglCircle(float x, float y, float z, float radius) {
 
 		break;
 	case SGL_FILL:
-		printf("No Circle filling algorithm implemented right now.\n");
+		// Bresenham's algorithm for drawing circle
+		xp = 0;
+		yp = radius;
+		p = 3 - 2 * radius;
+		while (xp < yp) {
+			setSymPointsFillLine(xp, yp, x, y, z, point);
+			if (p < 0) {
+				p = p + 4 * xp + 6;
+			}
+			else {
+				p = p + 4 * (xp - yp) + 10;
+				--yp;
+			}
+			++xp;
+		}
+		if (xp == yp)
+			setSymPointsFillLine(xp, yp, x, y, z, point);
+
+		//printf("No Circle filling algorithm implemented right now.\n");
 		break;
 	}
 }
@@ -1760,7 +1900,7 @@ void sglEllipseSecond(float x, float y, float z, float a, float b) {
 	point.a = 0;
 
 	inputPoint4f output;
-	transformThePoint(&point, output);
+	transformThePointAndCopyColor(&point, output);
 	x = output.x;
 	y = output.y;
 	//setPixel(x, y, 1.0f, 0.0f, 0.0f);
@@ -1842,7 +1982,7 @@ void sglEllipseSegmented(float x, float y, float z, float a, float b)
 		sglBegin(SGL_LINE_LOOP);
 		break;
 	case SGL_FILL:
-		printf("check sgl.cpp sglEllipseSegmented fill branch.");
+		//printf("check sgl.cpp sglEllipseSegmented fill branch.\n");
 		sglBegin(SGL_POLYGON);
 		break;
 	}
@@ -1973,7 +2113,18 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 		sglEnd();
 		break;
 	case SGL_FILL:
-		printf("No Arc filling algorithm implemented right now. \n");
+		sglBegin(SGL_POLYGON);
+		segments = 40;
+		angle = from;
+		delta = (to - from) / segments;
+		sglVertex3f(x, y, z);
+		for (int i = 0; i <= segments; i++)
+		{
+			sglVertex3f(x + radius*cos(angle), y + radius*sin(angle), z);
+			angle += delta;
+		}
+		sglEnd();
+		//printf("No Arc filling algorithm implemented right now. \n");
 		break;
 	}
 }

@@ -158,9 +158,9 @@ public:
 	}
 
 	void clearDepth() {
-		for (int i = 0; i < width; ++i) {
-			for (int j = 0; j < height; ++j) {
-				*(depthBuffer + i*j + j) = FLT_MAX;
+		for (int i = 0; i < height; ++i) {
+			for (int j = 0; j < width; ++j) {
+				*(depthBuffer + i*width + j) = FLT_MAX;
 			}
 		}
 	}
