@@ -307,6 +307,7 @@ void transformThePointAndCopyColor(inputPoint4f* point, inputPoint4f& output)
 {
 	// test if between sglBegin and sglEnd
 	if (hasBegun) {
+		printf("TRANSFORMING ----- has begun\n");
 		// for convenience, matrices are multiplied only once in sglEnd
 		multiplyMatrixVector(multipliedMatrix, point, output);
 		// perspective divide
@@ -320,6 +321,7 @@ void transformThePointAndCopyColor(inputPoint4f* point, inputPoint4f& output)
 		output.z = output.z * viewportMatrix[10] + viewportMatrix[14];
 	}
 	else {
+		printf("TRANSFORMING ----- outside begin-end\n");
 		// there is no sglBegin nor sglEnd, we can't be sure, where new 
 		// transformation will appear so it needs to be done every time
 		inputPoint4f tmp(*point);
@@ -749,12 +751,12 @@ void setPolyEdge(polyEdge *end, inputPoint4f *high, inputPoint4f *low)
 
 	end->Y_upper = high->y;
 	end->Y_lower = low->y + 1;
-	stepCount = end->Y_upper - end->Y_lower;
+	stepCount = end->Y_upper - end->Y_lower + 1;
 
 	step = (low->x - high->x) / (high->y - low->y);
 	end->X_step = step;
 	//printf("correction %f \n", ((float)(high->y) - (int)(high->y))*step);
-	end->X_upper = high->x + ((float)(high->y) - (int)(high->y))*step;
+	end->X_upper = high->x;// +((float)(high->y) - (int)(high->y))*step;
 	end->X_cross = end->X_upper;
 
 	end->R = high->r;
@@ -978,7 +980,10 @@ void drawMeAPolygon()
 			queue4f.pop();
 			counter++;
 
-			if (tempPoint1->y > tempPoint2->y)
+			int tempInt1 = tempPoint1->y;
+			int tempInt2 = tempPoint2->y;
+
+			if (tempInt1 > tempInt2)
 			{
 
 				//printf("POINT %f %f\n", tempPoint2->x, tempPoint2->y);
@@ -992,7 +997,7 @@ void drawMeAPolygon()
 				delete tempPoint1;
 
 				debugCount++;
-			}else if (tempPoint2->y > tempPoint1->y) {
+			}else if (tempInt2 > tempInt1) {
 
 				//printf("POINT %f %f\n", tempPoint2->x, tempPoint2->y);
 				setPolyEdge(endPrepared, tempPoint2, tempPoint1);
@@ -1738,6 +1743,7 @@ void setSymPointsFillLine(int x, int y, int xs, int ys, float z, inputPoint4f& p
 	float r = point.r;
 	float g = point.g;
 	float b = point.b;
+	//printf("x %d y %d ||| XS %d XE %d Y %d \n",xs, ys, xs -x, xs + x, ys + y);
 	fillLine(xs - x, xs + x, z, z, ys + y, r, g, b, r, g, b);
 	fillLine(xs - x, xs + x, z, z, ys - y, r, g, b, r, g, b);
 	fillLine(xs - y, xs + y, z, z, ys - x, r, g, b, r, g, b);
@@ -2099,6 +2105,17 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
 		sglEnd();
 		break;
 	case SGL_FILL:
+		sglBegin(SGL_POLYGON);
+		segments = 40;
+		angle = from;
+		delta = (to - from) / segments;
+		sglVertex3f(x, y, z);
+		for (int i = 0; i <= segments; i++)
+		{
+			sglVertex3f(x + radius*cos(angle), y + radius*sin(angle), z);
+			angle += delta;
+		}
+		sglEnd();
 		//printf("No Arc filling algorithm implemented right now. \n");
 		break;
 	}

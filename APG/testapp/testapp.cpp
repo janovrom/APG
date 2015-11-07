@@ -26,8 +26,8 @@
 #endif
 
 #ifdef TEST2
-#define TEST_2A
-//#define TEST_2B
+//#define TEST_2A
+#define TEST_2B
 //#define TEST_2C
 //#define TEST_2D
 #endif
@@ -398,8 +398,8 @@ void DrawTestScene2B()
   sglLoadIdentity();
 
   sglTranslate(1.5,0,0);
-  sglClearColor(0.0f,0,0,1);
-  sglClear(_contexts[4]);
+  //sglClearColor(1.0f,0,0,1);
+  //sglClear(SGL_COLOR_BUFFER_BIT);
   float r;
   // circles
   for(r=1.2; r>0.1; r-=0.1) {
@@ -413,7 +413,7 @@ void DrawTestScene2B()
     sglAreaMode(SGL_POINT);
     sglCircle(0, 0, 0, r);
   }
-
+  
   // ellipses
   sglTranslate(2.5,0,0);
 
@@ -903,7 +903,7 @@ void DrawTestScene1A(void)
   offsety = 6;
 
   sglColor3f(1,1,0);
-
+  sglAreaMode(SGL_FILL);
   for(float rr=r/5; rr<=r; rr+=r/5) {
     sglCircle(offsetx-1,offsety,0,0.5*rr);
     sglCircle(offsetx+3,offsety,0,1.5*rr);
@@ -1370,7 +1370,7 @@ int main(int argc, char **argv)
   sglSetContext(_contexts[4]);
   sglClearColor(0, 0, 0, 1);
   sglClear(SGL_COLOR_BUFFER_BIT);
-  for(int i=0; i<15; i++)
+  for(int i=0; i<15; i+=114)
     DrawTestScene2B();
   resultsInfo<<"    test2b.png : "<<timer.UserTime()<<endl;
   WriteTGA("results/test2b.tga");
