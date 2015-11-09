@@ -33,6 +33,9 @@ static inline void setErrCode(sglEErrorCode c)
     _libStatus = c;
 }
 
+/**
+Method for drawing into collor and depth buffers
+*/
 inline void drawPixel(int offsetC, int offsetD, float z, float r, float g, float b, float *colorBuffer, float *depthBuffer)
 {
 	if (testDepth == true)
@@ -43,10 +46,6 @@ inline void drawPixel(int offsetC, int offsetD, float z, float r, float g, float
 			*(colorBuffer + offsetC + 1) = g;
 			*(colorBuffer + offsetC + 2) = b;
 			*(depthBuffer + offsetD) = z;
-			//printf("%f\n",z);
-		}
-		else {
-			//printf("wrong depth: current %f written %f\n",*(colorBuffer + offsetC));
 		}
 	}
 	else
@@ -703,6 +702,9 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 
 }
 
+/**
+Method that draws pixels from start point to end point. It also interpolate colors.
+*/
 void fillLine(int xStart, int xEnd, float zStart, float zEnd, int row, float colRStart, float colGStart, float colBStart, float colREnd, float colGEnd, float colBEnd)
 {
 
@@ -739,7 +741,9 @@ void fillLine(int xStart, int xEnd, float zStart, float zEnd, int row, float col
 		lerpValue += lerpAdd;
 	}
 }
-
+/**
+Structure representing one line for polygon filling algorithm.
+*/
 struct polyEdge
 {
 	int Y_upper, Y_lower, X_cross;
@@ -751,6 +755,9 @@ struct polyEdge
 	float RD, GD, BD;
 };
 
+/**
+Method to set up edge for polygon filling.
+*/
 void setPolyEdge(polyEdge *end, inputPoint4f *high, inputPoint4f *low)
 {
 	int stepCount;
@@ -784,7 +791,9 @@ void setPolyEdge(polyEdge *end, inputPoint4f *high, inputPoint4f *low)
 	printf("polyEdge prepared\n\n");
 	*/
 }
-
+/**
+Order list of edges by Y_upper
+*/
 void listOrderByY_Upper(polyEdge *root, polyEdge *end)
 {
 	polyEdge *currentPred;
@@ -812,7 +821,9 @@ void listOrderByY_Upper(polyEdge *root, polyEdge *end)
 		}
 	}
 }
-
+/**
+Print all exdes from list
+*/
 void printList(polyEdge *root, polyEdge *end)
 {
 	polyEdge *current;
@@ -824,6 +835,9 @@ void printList(polyEdge *root, polyEdge *end)
 	}
 }
 
+/**
+Order list of edges by X_Cross 
+*/
 void listOrderByX_Cross(polyEdge *root, polyEdge *end)
 {
 	polyEdge *currentPred;
@@ -851,7 +865,9 @@ void listOrderByX_Cross(polyEdge *root, polyEdge *end)
 		}
 	}
 }
-
+/**
+Move all edges from old list to new list, if their Y_upper is greater than threshold
+*/
 void listChangeList(polyEdge *rootNew, polyEdge *rootOld, polyEdge *endOld, int threshold)
 {
 	//polyEdge *currentPred;
@@ -870,7 +886,9 @@ void listChangeList(polyEdge *rootNew, polyEdge *rootOld, polyEdge *endOld, int 
 		}
 	}
 }
-
+/**
+Fill segments defined by lines in list
+*/
 void drawActiveList(polyEdge *root, polyEdge *end)
 {
 	if (root->next == end) { return; }
@@ -889,7 +907,9 @@ void drawActiveList(polyEdge *root, polyEdge *end)
 		fillLine(first->X_cross, second->X_cross, first->Z_upper, second->Z_upper, first->Y_upper, first->R, first->G, first->B, second->R, second->G, second->B);
 	}
 }
-
+/**
+Decrement Y_upper and update colors, depth and x intersection of lines. Lines where Y_lower is greater than Y_upper are deleted
+*/
 void listDecrementActiveAndRemove(polyEdge *root, polyEdge *end)
 {
 	polyEdge *currentPred = root;
@@ -917,7 +937,9 @@ void listDecrementActiveAndRemove(polyEdge *root, polyEdge *end)
 		}
 	}
 }
-
+/**
+Draw polygon
+*/
 void drawMeAPolygon()
 {
 	switch (areaMode)
@@ -1086,6 +1108,9 @@ void drawMeAPolygon()
 	//printf("drawMeAPolygon dont draw now \n");
 }
 
+/**
+Draw triangle outlines
+*/
 void drawMeATriangleLineLoop(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v3)
 {
 	//printf("drawTriangleLineLoop not implemented yet! \n Transformation of points is still missing\n");
@@ -1095,6 +1120,9 @@ void drawMeATriangleLineLoop(inputPoint4f* v1, inputPoint4f* v2, inputPoint4f* v
 	drawMeALine(v3, v1);
 }
 
+/**
+Fill triangle defined by points t1, t2 and t3
+*/
 void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 {
 	//printf("trianglePrinting \n");
@@ -1401,7 +1429,9 @@ void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 
 	//printf("drawMeATriangle not implemented yet! \n Transformation of points is still missing\n");
 }
-
+/**
+draw triangles
+*/
 void drawTriangles()
 {
 

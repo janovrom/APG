@@ -8,8 +8,8 @@
 /// uncomment the tests you wish to run
 
 //#define TEST0
-//#define TEST1
-#define TEST2
+#define TEST1
+//#define TEST2
 //#define TEST3
 //#define TEST4
 //#define TEST5
@@ -20,13 +20,13 @@
 #endif
 
 #ifdef TEST1
-#define TEST_1A
+//#define TEST_1A
 //#define TEST_1B
-//#define TEST_1C
+#define TEST_1C
 #endif
 
 #ifdef TEST2
-#define TEST_2A
+//#define TEST_2A
 //#define TEST_2B
 //#define TEST_2C
 //#define TEST_2D
