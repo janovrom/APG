@@ -1426,7 +1426,9 @@ void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 		}
 
 	}
-	delete v1, v2, v3;
+	delete v1;
+	delete v2;
+	delete v3;
 
 	//printf("drawMeATriangle not implemented yet! \n Transformation of points is still missing\n");
 }
