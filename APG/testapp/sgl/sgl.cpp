@@ -824,6 +824,7 @@ void listOrderByY_Upper(polyEdge *root, polyEdge *end)
 /**
 Print all exdes from list
 */
+/*
 void printList(polyEdge *root, polyEdge *end)
 {
 	polyEdge *current;
@@ -834,7 +835,7 @@ void printList(polyEdge *root, polyEdge *end)
 		current = current->next;
 	}
 }
-
+*/
 /**
 Order list of edges by X_Cross 
 */
