@@ -149,9 +149,9 @@ void sglFinish(void) {
 		delete[] projectionStack.top();
 		projectionStack.pop();
 	}
-	for (;!queue4f.empty();) {
-		delete &queue4f.front();
-		queue4f.pop();
+	for (;!polygonQueue.empty();) {
+		delete &polygonQueue.front();
+		polygonQueue.pop_front();
 	}
 }
 
@@ -302,6 +302,26 @@ void sglBegin(sglEElementType mode)
 	}
 	hasBegun = true;
 	drawingMethod = mode;
+	// Only polygons can be created between sglBegin and sglEnd call.
+	// Though it don't have to be polygon, it can only be a set of points,
+	// lines or other elements constructed from points - inputPoint4f.
+	Polygon *p = new Polygon;
+	polygonQueue.push_back(p);
+	// add active material and texture to polygon
+	if (!materialStack.empty())
+	{
+		p->mat = materialStack.back();
+		if (p->mat->type == Material::MaterialType::EMISSIVE)
+			emissivePolygonStack.push_back(p);
+	}
+	else
+	{
+		p->mat = NULL;
+	}
+	if (!textureStack.empty())
+		p->tex = textureStack.back();
+	else
+		p->tex = NULL;
 }
 
 /*
@@ -962,7 +982,7 @@ void drawMeAPolygon()
 		polyEdge *endPrepared = rootPrepared->next;
 
 		inputPoint4f origin;
-		inputPoint4f *tempPoint1;
+		inputPoint4f *tempPoint1 = NULL;
 		inputPoint4f *tempPoint2;
 
 		inputPoint4f *tempTempPoint;
@@ -973,14 +993,14 @@ void drawMeAPolygon()
 		int top = -std::numeric_limits<int>::max();
 		int bottom = std::numeric_limits<int>::max();
 		//printf("limits - top %d bottom %d\n", top, bottom);
-
+		
 		//store first point
-		tempTempPoint = queue4f.front();
+		tempTempPoint = (polygonQueue.front())->points.front();
 		tempPoint2 = new inputPoint4f();
 		transformThePointAndCopyColor(tempTempPoint, *tempPoint2);
 		delete tempTempPoint;
 		
-		/*tempPoint2 = queue4f.front();
+		/*tempPoint2 = (polygonQueue.front())->points.front();
 		transformThePointAndCopyColor(tempPoint2, *tempPoint2);*/
 
 		//DEBUG
@@ -989,17 +1009,17 @@ void drawMeAPolygon()
 		//DEBUG ENDS
 
 		origin = *tempPoint2;
-		queue4f.pop();
+		(polygonQueue.front())->points.pop();
 		int counter = 1;
 
 		//printf("ORIGIN %f %f\n",origin.x, origin.y);
 
 		//build polyEdges
-		while (!queue4f.empty())
+		while (!(polygonQueue.front())->points.empty())
 		{
 			tempPoint1 = tempPoint2;
 			tempPoint2 = new inputPoint4f();
-			tempTempPoint = queue4f.front();
+			tempTempPoint = (polygonQueue.front())->points.front();
 			transformThePointAndCopyColor(tempTempPoint, *tempPoint2);
 			delete tempTempPoint;
 
@@ -1008,7 +1028,7 @@ void drawMeAPolygon()
 			drawPointNoTransform(*tempPoint2);*/
 			//DEBUG ENDS
 
-			queue4f.pop();
+			(polygonQueue.front())->points.pop();
 			counter++;
 
 			int tempInt1 = tempPoint1->y;
@@ -1042,6 +1062,8 @@ void drawMeAPolygon()
 
 				debugCount++;
 			}else {
+				if (tempPoint1 != NULL)
+					delete tempPoint1;
 				continue;
 			}
 		}
@@ -1053,7 +1075,6 @@ void drawMeAPolygon()
 		{
 			setPolyEdge(endPrepared, tempPoint2, &origin);
 			delete tempPoint2;
-
 			endPrepared->next = new polyEdge;
 			endPrepared = endPrepared->next;
 			debugCount++;
@@ -1061,7 +1082,6 @@ void drawMeAPolygon()
 		else if (origin.y > tempPoint2->y) {
 			setPolyEdge(endPrepared, &origin, tempPoint2);
 			delete tempPoint2;
-
 			endPrepared->next = new polyEdge;
 			endPrepared = endPrepared->next;
 			debugCount++;
@@ -1103,7 +1123,8 @@ void drawMeAPolygon()
 		delete endActive;
 		delete rootPrepared;
 		//printf("drawn\n");
-
+		delete polygonQueue.front();
+		polygonQueue.pop_front();
 		break;
 	}
 	//printf("drawMeAPolygon dont draw now \n");
@@ -1441,36 +1462,36 @@ void drawTriangles()
 	inputPoint4f *tempPoint1;
 	inputPoint4f *tempPoint2;
 	inputPoint4f *tempPoint3;
+
 	switch (areaMode)
 	{
 	case SGL_POINT:
 		drawPoints();
 		break;
 	case SGL_LINE:
-
-		while (!queue4f.empty())
+		while (!(polygonQueue.front())->points.empty())
 		{
-			tempPoint1 = queue4f.front();
-			queue4f.pop();
+			tempPoint1 = (polygonQueue.front())->points.front();
+			(polygonQueue.front())->points.pop();
 
-			if (queue4f.empty())
+			if ((polygonQueue.front())->points.empty())
 			{
 				delete tempPoint1;
 				break;
 			}
 
-			tempPoint2 = queue4f.front();
-			queue4f.pop();
+			tempPoint2 = (polygonQueue.front())->points.front();
+			(polygonQueue.front())->points.pop();
 
-			if (queue4f.empty())
+			if ((polygonQueue.front())->points.empty())
 			{
 				delete tempPoint1;
 				delete tempPoint2;
 				break;
 			}
 
-			tempPoint3 = queue4f.front();
-			queue4f.pop();
+			tempPoint3 = (polygonQueue.front())->points.front();
+			(polygonQueue.front())->points.pop();
 
 			drawMeATriangleLineLoop(tempPoint1, tempPoint2, tempPoint3);
 
@@ -1478,32 +1499,34 @@ void drawTriangles()
 			delete tempPoint2;
 			delete tempPoint3;
 		}
+		delete polygonQueue.front();
+		polygonQueue.pop_front();
 		break;
 	case SGL_FILL:
 
-		while (!queue4f.empty())
+		while (!(polygonQueue.front())->points.empty())
 		{
-			tempPoint1 = queue4f.front();
-			queue4f.pop();
+			tempPoint1 = (polygonQueue.front())->points.front();
+			(polygonQueue.front())->points.pop();
 
-			if (queue4f.empty())
+			if ((polygonQueue.front())->points.empty())
 			{
 				delete tempPoint1;
 				break;
 			}
 
-			tempPoint2 = queue4f.front();
-			queue4f.pop();
+			tempPoint2 = (polygonQueue.front())->points.front();
+			(polygonQueue.front())->points.pop();
 
-			if (queue4f.empty())
+			if ((polygonQueue.front())->points.empty())
 			{
 				delete tempPoint1;
 				delete tempPoint2;
 				break;
 			}
 
-			tempPoint3 = queue4f.front();
-			queue4f.pop();
+			tempPoint3 = (polygonQueue.front())->points.front();
+			(polygonQueue.front())->points.pop();
 
 			//printf("sending %f %f %f \n", tempPoint1->x, tempPoint1->y, tempPoint1->z);
 			drawMeATriangle(tempPoint1, tempPoint2, tempPoint3);
@@ -1512,6 +1535,8 @@ void drawTriangles()
 			delete tempPoint2;
 			delete tempPoint3;
 		}
+		delete polygonQueue.front();
+		polygonQueue.pop_front();
 		break;
 	}
 }
@@ -1537,13 +1562,15 @@ void drawPoints()
 {
 	inputPoint4f *tempPoint;
 
-	while (!queue4f.empty())
+	while (!(polygonQueue.front())->points.empty())
 	{
-		tempPoint = queue4f.front();
+		tempPoint = (polygonQueue.front())->points.front();
 		drawMeAPoint(tempPoint);
 		delete tempPoint;
-		queue4f.pop();
+		(polygonQueue.front())->points.pop();
 	}
+	delete polygonQueue.front();
+	polygonQueue.pop_front();
 }
 
 /**
@@ -1553,26 +1580,27 @@ void drawLines()
 {
 	inputPoint4f *tempPoint1;
 	inputPoint4f *tempPoint2;
-
 	//pick 2 following points and connect them with line
-	while (!queue4f.empty())
+	while (!(polygonQueue.front())->points.empty())
 	{
-		tempPoint1 = queue4f.front();
-		queue4f.pop();
+		tempPoint1 = (polygonQueue.front())->points.front();
+		(polygonQueue.front())->points.pop();
 
-		if (queue4f.empty())
+		if ((polygonQueue.front())->points.empty())
 		{
 			delete tempPoint1;
 			break;
 		}
 
-		tempPoint2 = queue4f.front();
-		queue4f.pop();
+		tempPoint2 = (polygonQueue.front())->points.front();
+		(polygonQueue.front())->points.pop();
 
 		drawMeALine(tempPoint1, tempPoint2);
 		delete tempPoint1;
 		delete tempPoint2;
 	}
+	delete polygonQueue.front();
+	polygonQueue.pop_front();
 }
 /**
 draw a strip of lines
@@ -1583,20 +1611,22 @@ void drawLineStrip()
 	inputPoint4f *tempPoint1;
 	inputPoint4f *tempPoint2;
 
-	if (queue4f.empty()) { return; }
-	tempPoint2 = queue4f.front();
-	queue4f.pop();
+	if ((polygonQueue.front())->points.empty()) { return; }
+	tempPoint2 = (polygonQueue.front())->points.front();
+	(polygonQueue.front())->points.pop();
 
-	while (!queue4f.empty())
+	while (!(polygonQueue.front())->points.empty())
 	{
 		tempPoint1 = tempPoint2;
-		tempPoint2 = queue4f.front();
-		queue4f.pop();
+		tempPoint2 = (polygonQueue.front())->points.front();
+		(polygonQueue.front())->points.pop();
 
 		drawMeALine(tempPoint1, tempPoint2);
 		delete tempPoint1;
 	}
 	delete tempPoint2;
+	delete polygonQueue.front();
+	polygonQueue.pop_front();
 }
 /**
 draw a loop of lines
@@ -1608,18 +1638,18 @@ void drawLineLoop()
 	inputPoint4f *tempPoint2;
 
 	//store first point
-	if (queue4f.empty()) { return; }
-	tempPoint2 = queue4f.front();
+	if ((polygonQueue.front())->points.empty()) { return; }
+	tempPoint2 = (polygonQueue.front())->points.front();
 	origin = *tempPoint2;
-	queue4f.pop();
+	(polygonQueue.front())->points.pop();
 	int counter = 1;
 
 	//draw lines form first point to last point
-	while (!queue4f.empty())
+	while (!(polygonQueue.front())->points.empty())
 	{
 		tempPoint1 = tempPoint2;
-		tempPoint2 = queue4f.front();
-		queue4f.pop();
+		tempPoint2 = (polygonQueue.front())->points.front();
+		(polygonQueue.front())->points.pop();
 		counter++;
 
 		drawMeALine(tempPoint1, tempPoint2);
@@ -1632,11 +1662,23 @@ void drawLineLoop()
 		drawMeALine(tempPoint2, &origin);
 	}
 	delete tempPoint2;
+	delete polygonQueue.front();
+	polygonQueue.pop_front();
 }
 
 void sglEnd(void) 
 {
-	if (!hasBegun) { setErrCode(SGL_INVALID_OPERATION); return; }
+	// do not draw anything, if scene is being constructed
+	if (constructingScene)
+	{
+		return;
+	}
+
+	if (!hasBegun) 
+	{ 
+		setErrCode(SGL_INVALID_OPERATION); 
+		return; 
+	}
 
 	// so there is no need to compute multiplication every time, it is computed once here
 	copyMatrix(matrixMVP, identityMatrix);
@@ -1690,6 +1732,10 @@ void sglEnd(void)
 
 void sglVertex4f(float x, float y, float z, float w) 
 {
+	// We can add points directly to polygon which is last in the queue,
+	// since it was added last, during call to sglBegin and before sglEnd.
+	Polygon *polygon = polygonQueue.back();
+
 	inputPoint4f *point = new inputPoint4f;
 	(*point).x = x;
 	(*point).y = y;
@@ -1700,11 +1746,20 @@ void sglVertex4f(float x, float y, float z, float w)
 	(*point).g = colorVertexG;
 	(*point).b = colorVertexB;
 
-	queue4f.push(point);
+	//if (!materialStack.empty())
+	//	point->mat = materialStack.back();
+	//else
+	//	point->mat = NULL;
+
+	polygon->points.push(point);
 }
 
 void sglVertex3f(float x, float y, float z) 
 {
+	// We can add points directly to polygon which is last in the queue,
+	// since it was added last, during call to sglBegin and before sglEnd.
+	Polygon *polygon = polygonQueue.back();
+
 	inputPoint4f *point = new inputPoint4f;
 	(*point).x = x;
 	(*point).y = y;
@@ -1715,11 +1770,19 @@ void sglVertex3f(float x, float y, float z)
 	(*point).g = colorVertexG;
 	(*point).b = colorVertexB;
 
-	queue4f.push(point);
+	//if (!materialStack.empty())
+	//	point->mat = materialStack.back();
+	//else
+	//	point->mat = NULL;
+
+	polygon->points.push(point);
 }
 
 void sglVertex2f(float x, float y) 
 {
+	// We can add points directly to polygon which is last in the queue,
+	// since it was added last, during call to sglBegin and before sglEnd.
+	Polygon *polygon = polygonQueue.back();
 	inputPoint4f *point = new inputPoint4f;
 	(*point).x = x;
 	(*point).y = y;
@@ -1730,7 +1793,12 @@ void sglVertex2f(float x, float y)
 	(*point).g = colorVertexG;
 	(*point).b = colorVertexB;
 
-	queue4f.push(point);
+	//if (!materialStack.empty())
+	//	point->mat = materialStack.back();
+	//else
+	//	point->mat = NULL;
+
+	polygon->points.push(point);
 }
 
 /**
@@ -2568,14 +2636,90 @@ void sglDisable(sglEEnableFlags cap) {
 // RayTracing oriented functions
 //---------------------------------------------------------------------------
 
-void sglBeginScene() {}
+void sglBeginScene() {
 
-void sglEndScene() {}
+	while (!materialStack.empty())
+	{
+		delete materialStack.back();
+		materialStack.pop_back();
+	}
+	while (!sphereStack.empty())
+	{
+		delete sphereStack.back();
+		sphereStack.pop_back();
+	}
+	while (!lightStack.empty())
+	{
+		delete lightStack.back();
+		lightStack.pop_back();
+	}
+	while (!polygonQueue.empty())
+	{
+		delete polygonQueue.front();
+		polygonQueue.pop_front();
+	}
+	while (!textureStack.empty())
+	{
+		delete textureStack.back();
+		textureStack.pop_back();
+	}
+
+	if (hasBegun || contextWrapper.empty())
+	{
+		setErrCode(SGL_INVALID_OPERATION);
+		return;
+	}
+
+	// say that we are constructing scene and sglEnd should not draw anything
+	constructingScene = true;
+}
+
+void sglEndScene() 
+{
+	if (hasBegun || contextWrapper.empty())
+	{
+		setErrCode(SGL_INVALID_OPERATION);
+		return;
+	}
+
+	// so there is no need to compute multiplication every time, it is computed once here
+	copyMatrix(matrixMVP, identityMatrix);
+	// creates viewport (and there should be perspective divide)
+	copyMatrix(viewportMatrix, identityMatrix);
+	viewportMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
+	viewportMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
+	viewportMatrix[10] = 0.5f;
+	viewportMatrix[12] = (viewportWidth / 2.0f) + viewportOffsetX;
+	viewportMatrix[13] = (viewportHeight / 2.0f) + viewportOffsetY;
+	viewportMatrix[14] = 0.5f;
+	multiplyMatrix(matrixMVP, projectionStack.top());
+	multiplyMatrix(matrixMVP, modelViewStack.top());
+
+	copyMatrix(multipliedMatrix, viewportMatrix);
+	multiplyMatrix(multipliedMatrix, matrixMVP);
+
+	// allow drawing during sglEnd call
+	constructingScene = false;
+}
 
 void sglSphere(const float x,
 			   const float y,
 			   const float z,
-			   const float radius) {}
+			   const float radius) 
+{
+	if (hasBegun || contextWrapper.empty())
+	{
+		setErrCode(SGL_INVALID_OPERATION);
+		return;
+	}
+
+	Sphere *s = new Sphere;
+	s->x = x;
+	s->y = y;
+	s->z = z;
+	s->radius = radius;
+	sphereStack.push_back(s);
+}
 
 void sglMaterial(const float r,
 				 const float g,
@@ -2584,23 +2728,82 @@ void sglMaterial(const float r,
 				 const float ks,
 				 const float shine,
 				 const float T,
-				 const float ior) {}
+				 const float ior) 
+{
+	if (hasBegun || contextWrapper.empty())
+	{
+		setErrCode(SGL_INVALID_OPERATION);
+		return;
+	}
+
+	PhongMaterial *mat = new PhongMaterial;
+	mat->r = r;
+	mat->g = g;
+	mat->b = b;
+	mat->kd = kd;
+	mat->ks = ks;
+	mat->shine = shine;
+	mat->transmitance = T;
+	mat->refractIndex = ior;
+
+	materialStack.push_back(mat);
+}
 
 void sglPointLight(const float x,
 				   const float y,
 				   const float z,
 				   const float r,
 				   const float g,
-				   const float b) {}
+				   const float b) 
+{
+	if (hasBegun || contextWrapper.empty())
+	{
+		setErrCode(SGL_INVALID_OPERATION);
+		return;
+	}
 
-void sglRayTraceScene() {}
+	PointLight *l = new PointLight;
+	l->x = x;
+	l->y = y;
+	l->z = z;
+	l->r = r;
+	l->g = g;
+	l->b = b;
+	lightStack.push_back(l);
+}
+
+void sglRayTraceScene() 
+{
+	// last matrix on stack should be view matrix
+	// at least it is this way in testapp, since there is 
+	// no such method as sglLookAt to create view matrix
+	// we can only hope this will suffice
+
+	/*float viewMatrix[16] =
+	{
+		xaxis->x, yaxis->x, zaxis->x, 0,
+		xaxis->y, yaxis->y, zaxis->y, 0,
+		xaxis->z, yaxis->z, zaxis->z, 0,
+		-Dot(xaxis, eye),-Dot(yaxis, eye), -Dot(zaxis, eye), 1
+	};*/
+	float inverse[16];
+
+	gluInvertMatrix(multipliedMatrix, inverse);
+
+	float rDir[3];
+	float rOrigin[3];
+	float rLen;
+}
 
 void sglRasterizeScene() {}
 
 void sglEnvironmentMap(const int width,
 					   const int height,
 					   float *texels)
-{}
+{
+	Texture *map = new Texture(Texture::SGL_NEAREST, width, height, texels, Texture::SGL_CLAMP);
+	contextWrapper[contextWrapper.activeContext]->SetEnvironmentMap(map);
+}
 
 void sglEmissiveMaterial(
 						 const float r,
@@ -2610,4 +2813,19 @@ void sglEmissiveMaterial(
 						 const float c1,
 						 const float c2
 						 )
-{}
+{
+	if (hasBegun || contextWrapper.empty())
+	{
+		setErrCode(SGL_INVALID_OPERATION);
+		return;
+	}
+
+	EmissiveMaterial *mat = new EmissiveMaterial;
+	mat->r = r;
+	mat->g = g;
+	mat->b = b;
+	mat->a0 = c0;
+	mat->a1 = c1;
+	mat->a2 = c2;
+	materialStack.push_back(mat);
+}
