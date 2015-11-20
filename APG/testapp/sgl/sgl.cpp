@@ -2754,6 +2754,9 @@ void sglFrustum(float left, float right, float bottom, float top, float near, fl
 		return;
 	}
 
+	zNear = near;
+	zFar = far;
+
 	float A = (right + left) / (right - left);
 	float B = (top + bottom) / (top - bottom);
 	float C = -(far + near) / (far - near);
@@ -2931,22 +2934,6 @@ void sglEndScene()
 		return;
 	}
 
-	// so there is no need to compute multiplication every time, it is computed once here
-	copyMatrix(matrixMVP, identityMatrix);
-	// creates viewport (and there should be perspective divide)
-	copyMatrix(viewportMatrix, identityMatrix);
-	viewportMatrix[0] = (viewportWidth - viewportOffsetX) / 2.0f;
-	viewportMatrix[5] = (viewportHeight - viewportOffsetY) / 2.0f;
-	viewportMatrix[10] = 0.5f;
-	viewportMatrix[12] = (viewportWidth / 2.0f) + viewportOffsetX;
-	viewportMatrix[13] = (viewportHeight / 2.0f) + viewportOffsetY;
-	viewportMatrix[14] = 0.5f;
-	multiplyMatrix(matrixMVP, projectionStack.top());
-	multiplyMatrix(matrixMVP, modelViewStack.top());
-
-	copyMatrix(multipliedMatrix, viewportMatrix);
-	multiplyMatrix(multipliedMatrix, matrixMVP);
-
 	// allow drawing during sglEnd call
 	constructingScene = false;
 }
@@ -3028,20 +3015,52 @@ void sglRayTraceScene()
 	// no such method as sglLookAt to create view matrix
 	// we can only hope this will suffice
 
-	/*float viewMatrix[16] =
-	{
-		xaxis->x, yaxis->x, zaxis->x, 0,
-		xaxis->y, yaxis->y, zaxis->y, 0,
-		xaxis->z, yaxis->z, zaxis->z, 0,
-		-Dot(xaxis, eye),-Dot(yaxis, eye), -Dot(zaxis, eye), 1
-	};*/
+	// lets compute some matrices
+	copyMatrix(matrixMVP, identityMatrix);
+	multiplyMatrix(matrixMVP, projectionStack.top());
+	multiplyMatrix(matrixMVP, modelViewStack.top());
 	float inverse[16];
-
-	gluInvertMatrix(multipliedMatrix, inverse);
+	gluInvertMatrix(matrixMVP, inverse);
 
 	float rDir[3];
 	float rOrigin[3];
 	float rLen;
+	float winHeight = (float) contextWrapper[contextWrapper.activeContext]->getHeight();
+	float winWidth = (float) contextWrapper[contextWrapper.activeContext]->getWidth();
+
+	inputPoint4f tmpP;
+	inputPoint4f nearP;
+	inputPoint4f farP;
+
+	for (int row = 0; row < winHeight; ++row)
+	{
+		for (int col = 0; col < winWidth; ++col)
+		{
+			// init near point
+			// inverse viewport
+			tmpP.x = (col - (viewportOffsetX + winWidth / 2.0f)) * 2.0f / winWidth;
+			tmpP.y = (row - (viewportOffsetY + winHeight / 2.0f)) * 2.0f / winHeight;
+			tmpP.z = -1;
+			tmpP.w = 1;
+			multiplyMatrixVector(inverse, &tmpP, nearP);
+			rOrigin[0] = nearP.x / nearP.w;
+			rOrigin[1] = nearP.y / nearP.w;
+			rOrigin[2] = nearP.z / nearP.w;
+			// init far point - values are same, only z coordinate is different
+			tmpP.z = 1;
+			multiplyMatrixVector(inverse, &tmpP, farP);
+			rDir[0] = farP.x / farP.w - rOrigin[0];
+			rDir[1] = farP.y / farP.w - rOrigin[1];
+			rDir[2] = farP.z / farP.w - rOrigin[2];
+			// get ray length
+			rLen = sqrtf(rDir[0] * rDir[0] + rDir[1] * rDir[1] + rDir[2] * rDir[2]);
+			// while at it, normalize direction
+			rDir[0] /= rLen;
+			rDir[1] /= rLen;
+			rDir[2] /= rLen;
+			// here goes raytracing
+		}
+	}
 }
 
 void sglRasterizeScene() {}
