@@ -1596,7 +1596,120 @@ void normalize(float *out)
 bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
 {
 	printf("sgl.cpp: collideWithSphere not implemented yet. \n");
-	return false;
+
+	float a, b, c, D;
+	float temp[3];
+	float imp[3];
+	float nor[3];
+
+	float len;
+
+	a = 1;
+
+	temp[0] = ray.start[0] - s.x;
+	temp[1] = ray.start[1] - s.y;
+	temp[2] = ray.start[2] - s.z;
+
+	b = 2 * dot(ray.dir,temp);
+	c = dot(temp, temp) - s.radius*s.radius;
+	D = b*b - 4 * a*c;
+
+	if ( D > 0)
+	{
+		// 2 solutions
+		float t0, t1, Ds;
+
+		Ds = sqrt(D);
+
+		t0 = (-b + Ds) / (2 * a);
+		t1 = (-b - Ds) / (2 * a);
+
+		if ( t0 > 0 && t0 < ray.length)
+		{
+			//t0 is valid and short enough
+			if (t1 > 0 && t1 < t0)
+			{
+				//t1 is valid and is shorter than t0
+				// -> t1
+
+				imp[0] = ray.start[0] + t1 * ray.dir[0];
+				imp[1] = ray.start[1] + t1 * ray.dir[1];
+				imp[2] = ray.start[2] + t1 * ray.dir[2];
+				len = t1;
+			}else {
+				//t1 isnt valid or is longer than t0 
+				// -> t0
+
+				imp[0] = ray.start[0] + t0 * ray.dir[0];
+				imp[1] = ray.start[1] + t0 * ray.dir[1];
+				imp[2] = ray.start[2] + t0 * ray.dir[2];
+				len = t0;
+			}
+		}
+		else {
+			//t0 is invalid or too long
+			if(t0 > 0 && t0 < ray.length)
+			{
+				//t1 is valid and short enough
+				// -> t1
+
+				imp[0] = ray.start[0] + t1 * ray.dir[0];
+				imp[1] = ray.start[1] + t1 * ray.dir[1];
+				imp[2] = ray.start[2] + t1 * ray.dir[2];
+				len = t1;
+			}else {
+				//none is valid
+				return false;
+			}
+		}
+
+		nor[0] = imp[0] - s.x;
+		nor[1] = imp[1] - s.y;
+		nor[2] = imp[2] - s.z;
+
+		float d = dot(ray.dir, nor);
+		if (d > 0)
+		{
+			//backface culling
+			return false;
+		}
+
+		length = len;
+
+		impact[0] = imp[0];
+		impact[1] = imp[1];
+		impact[2] = imp[2];
+
+		normal[0] = nor[0];
+		normal[1] = nor[1];
+		normal[2] = nor[2];
+
+
+	}else if (D == 0) {
+		// 1 solution
+		float t;
+
+		t = (-b) / (2 * a);
+
+		if (t < 0 || t > ray.length)
+		{
+			// t is invalid or too long
+			return false;
+		}
+
+		length = t;
+
+		impact[0] = ray.start[0] + t * ray.dir[0];
+		impact[1] = ray.start[1] + t * ray.dir[1];
+		impact[2] = ray.start[2] + t * ray.dir[2];
+
+		normal[0] = impact[0] - s.x;
+		normal[1] = impact[1] - s.y;
+		normal[2] = impact[2] - s.z;
+	}else {
+		// no solution
+		return false;
+	}
 }
 
 bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, float *normal)
@@ -1736,6 +1849,15 @@ void setNoHitColor(float& r, float& g, float& b)
 	printf("sgl.cpp : setNoHitColor() is just temporal method. \n");
 }
 
+void addEmissiveColor(EmissiveMaterial& m, float& r, float& g, float& b, float l)
+{
+	r += m.r;
+	g += m.g;
+	b += m.b;
+	printf("sgl.cpp : addEmissiveColor() not implemented yet. \n");
+
+}
+
 /**
 Method to find intersections of ray with scene. Returned color will be computed from and stored in parameters r, g and b.
 */
@@ -1772,6 +1894,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 		if (collideWithTriangle(ray, *p, len, impact, normal))
 		{
 			hit = true;
+			ray.length = len;
 			m = p->mat;
 			t = p->tex;
 			hitEmmisive = (m->type == MaterialType::EMISSIVE);
@@ -1787,6 +1910,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 		if (collideWithSphere(ray, *s, len, impact, normal))
 		{
 			hit = true;
+			ray.length = len;
 			m = p->mat;
 			t = p->tex;
 			hitEmmisive = (m->type == MaterialType::EMISSIVE);
@@ -1800,9 +1924,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 		{
 			mE = static_cast<EmissiveMaterial *>(m);
 
-			r += mE->r;
-			g += mE->g;
-			b += mE->b;
+			addEmissiveColor(*mE, r, g, b, ray.length);
 		}
 		else {
 
