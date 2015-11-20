@@ -114,13 +114,15 @@ public:
 	}
 };
 
-struct Material
-{
-static enum MaterialType
+
+enum MaterialType
 {
 	EMISSIVE,
 	PHONG
 };
+
+struct Material
+{
 MaterialType type;
 protected:
 
@@ -183,6 +185,7 @@ std::vector<PointLight*> lightStack;
 
 struct Primitive
 {
+public:
 	static enum PrimitiveType
 	{
 		POLYGON,
@@ -201,14 +204,14 @@ protected:
 
 struct Polygon : public Primitive
 {
-	std::queue<inputPoint4f*> points;
+	std::deque<inputPoint4f*> points;
 
 	~Polygon()
 	{
 		while (!points.empty())
 		{
 			delete points.front();
-			points.pop();
+			points.pop_front();
 		}
 	}
 };
@@ -568,3 +571,10 @@ public:
 		return -1;
 	}
 } contextWrapper;
+
+struct Ray
+{
+	float *start;
+	float *dir;
+	float length;
+};

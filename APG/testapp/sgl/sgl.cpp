@@ -9,7 +9,7 @@
 #include "sglcontext.h"
 #include <limits>
 
-
+#define EPSILON 0.000001
 
 //#define LINE_NAIVE
 // decides which ellipse algoritm should be used
@@ -311,7 +311,7 @@ void sglBegin(sglEElementType mode)
 	if (!materialStack.empty())
 	{
 		p->mat = materialStack.back();
-		if (p->mat->type == Material::MaterialType::EMISSIVE)
+		if (p->mat->type == MaterialType::EMISSIVE)
 			emissivePolygonStack.push_back(p);
 	}
 	else
@@ -1009,7 +1009,7 @@ void drawMeAPolygon()
 		//DEBUG ENDS
 
 		origin = *tempPoint2;
-		(polygonQueue.front())->points.pop();
+		(polygonQueue.front())->points.pop_front();
 		int counter = 1;
 
 		//printf("ORIGIN %f %f\n",origin.x, origin.y);
@@ -1028,7 +1028,7 @@ void drawMeAPolygon()
 			drawPointNoTransform(*tempPoint2);*/
 			//DEBUG ENDS
 
-			(polygonQueue.front())->points.pop();
+			(polygonQueue.front())->points.pop_front();
 			counter++;
 
 			int tempInt1 = tempPoint1->y;
@@ -1472,7 +1472,7 @@ void drawTriangles()
 		while (!(polygonQueue.front())->points.empty())
 		{
 			tempPoint1 = (polygonQueue.front())->points.front();
-			(polygonQueue.front())->points.pop();
+			(polygonQueue.front())->points.pop_front();
 
 			if ((polygonQueue.front())->points.empty())
 			{
@@ -1481,7 +1481,7 @@ void drawTriangles()
 			}
 
 			tempPoint2 = (polygonQueue.front())->points.front();
-			(polygonQueue.front())->points.pop();
+			(polygonQueue.front())->points.pop_front();
 
 			if ((polygonQueue.front())->points.empty())
 			{
@@ -1491,7 +1491,7 @@ void drawTriangles()
 			}
 
 			tempPoint3 = (polygonQueue.front())->points.front();
-			(polygonQueue.front())->points.pop();
+			(polygonQueue.front())->points.pop_front();
 
 			drawMeATriangleLineLoop(tempPoint1, tempPoint2, tempPoint3);
 
@@ -1507,7 +1507,7 @@ void drawTriangles()
 		while (!(polygonQueue.front())->points.empty())
 		{
 			tempPoint1 = (polygonQueue.front())->points.front();
-			(polygonQueue.front())->points.pop();
+			(polygonQueue.front())->points.pop_front();
 
 			if ((polygonQueue.front())->points.empty())
 			{
@@ -1516,7 +1516,7 @@ void drawTriangles()
 			}
 
 			tempPoint2 = (polygonQueue.front())->points.front();
-			(polygonQueue.front())->points.pop();
+			(polygonQueue.front())->points.pop_front();
 
 			if ((polygonQueue.front())->points.empty())
 			{
@@ -1526,7 +1526,7 @@ void drawTriangles()
 			}
 
 			tempPoint3 = (polygonQueue.front())->points.front();
-			(polygonQueue.front())->points.pop();
+			(polygonQueue.front())->points.pop_front();
 
 			//printf("sending %f %f %f \n", tempPoint1->x, tempPoint1->y, tempPoint1->z);
 			drawMeATriangle(tempPoint1, tempPoint2, tempPoint3);
@@ -1567,10 +1567,259 @@ void drawPoints()
 		tempPoint = (polygonQueue.front())->points.front();
 		drawMeAPoint(tempPoint);
 		delete tempPoint;
-		(polygonQueue.front())->points.pop();
+		(polygonQueue.front())->points.pop_front();
 	}
 	delete polygonQueue.front();
 	polygonQueue.pop_front();
+}
+
+void cross(float *out, float *in1, float *in2)
+{
+	out[0] = in1[1] * in2[2] - in1[2] * in2[1];
+	out[1] = in1[2] * in2[0] - in1[0] * in2[2];
+	out[2] = in1[0] * in2[1] - in1[1] * in2[0];
+}
+
+float dot( float *in1, float *in2)
+{
+	return in1[0] * in2[0] + in1[1] * in2[1] + in1[2] * in2[2];
+}
+
+void normalize(float *out)
+{
+	float f = sqrt(dot(out, out));
+	out[0] *= f;
+	out[1] *= f;
+	out[2] *= f;
+}
+
+bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
+{
+	printf("sgl.cpp: collideWithSphere not implemented yet. \n");
+	return false;
+}
+
+bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, float *normal)
+{
+	float e1[3], e2[3], qvec[3], tvec[3], pvec[3];
+	inputPoint4f *v0, *v1, *v2;
+
+	if(p.points.size() != 3 )
+	{
+		printf("POLYGON TRACING NOT SUPPORTED\N");
+	}
+	v0 = p.points[0];
+	v1 = p.points[1];
+	v2 = p.points[2];
+
+	e1[0] = v1->x - v0->x;
+	e1[1] = v1->y - v0->y;
+	e1[2] = v1->z - v0->z;
+
+	e2[0] = v2->x - v0->x;
+	e2[1] = v2->y - v0->y;
+	e2[2] = v2->z - v0->z;
+
+	cross(pvec, ray.dir, e2);
+
+	float det = dot(e1, pvec);
+
+	if (det > -EPSILON && det < EPSILON)
+	{
+		return false;
+	}
+
+	tvec[0] = ray.start[0] - v0->x;
+	tvec[1] = ray.start[1] - v0->y;
+	tvec[2] = ray.start[2] - v0->z;
+
+	float u = dot(tvec, pvec);
+
+	if (u < 0.0f || u > det)
+	{
+		return false;
+	}
+
+	cross(qvec, tvec, e1);
+
+	float v = dot(ray.dir, qvec);
+	if (v < 0.0f || u + v > det)
+	{
+		return false;
+	}
+
+
+	float t = dot(e2, qvec);
+
+	det = 1 / det;
+	u *= det;
+	v *= det;
+	t *= det;
+
+
+	if (t < 0.0f || t > length)
+	{
+		return false;
+	}
+
+	cross(normal, e1, e2);
+	normalize(normal);
+
+	impact[0] = ray.start[0] + t*ray.dir[0];
+	impact[1] = ray.start[1] + t*ray.dir[1];
+	impact[2] = ray.start[2] + t*ray.dir[2];
+
+	length = t;
+
+
+	return true;
+}
+
+void phongDiffuse(float *n, float *impact, PhongMaterial& m, PointLight& l, float& r, float& g, float& b)
+{
+	float toLight[3];
+
+	toLight[0] = l.x - impact[0];
+	toLight[1] = l.y - impact[1];
+	toLight[2] = l.z - impact[2];
+	normalize(toLight);
+
+	float d = dot(n, toLight);
+
+	r += l.r * m.kd * m.r * d;
+	g += l.g * m.kd * m.g * d;
+	b += l.b * m.kd * m.b * d;
+}
+
+void copyVec(float *in, float *out)
+{
+	out[0] = in[0];
+	out[1] = in[1];
+	out[2] = in[2];
+}
+
+void reflect(float *dir, float *n, float *out)
+{
+	copyVec(dir, out);
+	float mult = -2*dot(out, n);
+
+	out[0] += mult * n[0];
+	out[1] += mult * n[1];
+	out[2] += mult * n[2];
+}
+
+void phongSpecular(float *n, float *dir, float *impact, PhongMaterial& m, PointLight& l, float& r, float& g, float& b)
+{
+	float toLight[3];
+	float reflected[3];
+
+	toLight[0] = l.x - impact[0];
+	toLight[1] = l.y - impact[1];
+	toLight[2] = l.z - impact[2];
+	normalize(toLight);
+
+	reflect(dir, n, reflected);
+
+	float d = dot(reflected, toLight);
+	d = pow(d, m.shine);
+
+	r += l.r * m.ks * d;
+	g += l.g * m.ks * d;
+	b += l.b * m.ks * d;
+}
+
+void setNoHitColor(float& r, float& g, float& b)
+{
+	r = 0.0f;
+	g = 0.0f;
+	b = 0.0f;
+	printf("sgl.cpp : setNoHitColor() is just temporal method. \n");
+}
+
+/**
+Method to find intersections of ray with scene. Returned color will be computed from and stored in parameters r, g and b.
+*/
+bool traceRay(Ray& ray, float& r, float& g, float &b)
+{
+	std::deque<Polygon *>::iterator itD;
+	std::vector<Polygon *>::iterator itE; 
+	std::vector<PointLight*>::iterator itL; 
+	std::vector<Sphere*>::iterator itS;
+
+	//std::deque<Polygon*> polygonQueue;
+	//std::vector<Polygon*> emissivePolygonStack;
+	//std::vector<PointLight*> lightStack;
+	Polygon *p;
+	Sphere *s;
+	PointLight *l;
+
+	float impact[3];
+	float normal[3];
+	float len = ray.length;
+	Material *m;
+	PhongMaterial *mP;
+	EmissiveMaterial *mE;
+	Texture *t;
+
+	bool hit = false;
+	bool hitEmmisive = false;
+
+	itD = polygonQueue.begin();
+	for (; itD != polygonQueue.end() ; itD++)
+	{
+		p = *itD;
+		
+		if (collideWithTriangle(ray, *p, len, impact, normal))
+		{
+			hit = true;
+			m = p->mat;
+			t = p->tex;
+			hitEmmisive = (m->type == MaterialType::EMISSIVE);
+		}
+
+	}
+
+	itS = sphereStack.begin();
+	for (; itS != sphereStack.end(); itS++)
+	{
+		s = *itS;
+
+		if (collideWithSphere(ray, *s, len, impact, normal))
+		{
+			hit = true;
+			m = p->mat;
+			t = p->tex;
+			hitEmmisive = (m->type == MaterialType::EMISSIVE);
+		}
+	}
+
+
+	if (hit)
+	{
+		if (hitEmmisive)
+		{
+			mE = static_cast<EmissiveMaterial *>(m);
+
+			r += mE->r;
+			g += mE->g;
+			b += mE->b;
+		}
+		else {
+
+			itL = lightStack.begin();
+			for (; itL != lightStack.end(); itL++)
+			{
+				l = *itL;
+				mP = static_cast<PhongMaterial *>(m);
+				phongDiffuse(normal, impact, *mP, *l, r, g, b);
+				phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
+			}
+		}
+	}else {
+		setNoHitColor(r, g, b);
+		return false;
+	}
+
 }
 
 /**
@@ -1584,7 +1833,7 @@ void drawLines()
 	while (!(polygonQueue.front())->points.empty())
 	{
 		tempPoint1 = (polygonQueue.front())->points.front();
-		(polygonQueue.front())->points.pop();
+		(polygonQueue.front())->points.pop_front();
 
 		if ((polygonQueue.front())->points.empty())
 		{
@@ -1593,7 +1842,7 @@ void drawLines()
 		}
 
 		tempPoint2 = (polygonQueue.front())->points.front();
-		(polygonQueue.front())->points.pop();
+		(polygonQueue.front())->points.pop_front();
 
 		drawMeALine(tempPoint1, tempPoint2);
 		delete tempPoint1;
@@ -1613,13 +1862,13 @@ void drawLineStrip()
 
 	if ((polygonQueue.front())->points.empty()) { return; }
 	tempPoint2 = (polygonQueue.front())->points.front();
-	(polygonQueue.front())->points.pop();
+	(polygonQueue.front())->points.pop_front();
 
 	while (!(polygonQueue.front())->points.empty())
 	{
 		tempPoint1 = tempPoint2;
 		tempPoint2 = (polygonQueue.front())->points.front();
-		(polygonQueue.front())->points.pop();
+		(polygonQueue.front())->points.pop_front();
 
 		drawMeALine(tempPoint1, tempPoint2);
 		delete tempPoint1;
@@ -1641,7 +1890,7 @@ void drawLineLoop()
 	if ((polygonQueue.front())->points.empty()) { return; }
 	tempPoint2 = (polygonQueue.front())->points.front();
 	origin = *tempPoint2;
-	(polygonQueue.front())->points.pop();
+	(polygonQueue.front())->points.pop_front();
 	int counter = 1;
 
 	//draw lines form first point to last point
@@ -1649,7 +1898,7 @@ void drawLineLoop()
 	{
 		tempPoint1 = tempPoint2;
 		tempPoint2 = (polygonQueue.front())->points.front();
-		(polygonQueue.front())->points.pop();
+		(polygonQueue.front())->points.pop_front();
 		counter++;
 
 		drawMeALine(tempPoint1, tempPoint2);
@@ -1751,7 +2000,7 @@ void sglVertex4f(float x, float y, float z, float w)
 	//else
 	//	point->mat = NULL;
 
-	polygon->points.push(point);
+	polygon->points.push_back(point);
 }
 
 void sglVertex3f(float x, float y, float z) 
@@ -1775,7 +2024,7 @@ void sglVertex3f(float x, float y, float z)
 	//else
 	//	point->mat = NULL;
 
-	polygon->points.push(point);
+	polygon->points.push_back(point);
 }
 
 void sglVertex2f(float x, float y) 
@@ -1798,7 +2047,7 @@ void sglVertex2f(float x, float y)
 	//else
 	//	point->mat = NULL;
 
-	polygon->points.push(point);
+	polygon->points.push_back(point);
 }
 
 /**
