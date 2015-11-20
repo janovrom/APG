@@ -1595,7 +1595,7 @@ void normalize(float *out)
 
 bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
 {
-	printf("sgl.cpp: collideWithSphere not implemented yet. \n");
+	//printf("sgl.cpp: collideWithSphere not implemented yet. \n");
 
 	float a, b, c, D;
 	float temp[3];
@@ -1911,8 +1911,8 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 		{
 			hit = true;
 			ray.length = len;
-			m = p->mat;
-			t = p->tex;
+			m = s->mat;
+			t = s->tex;
 			hitEmmisive = (m->type == MaterialType::EMISSIVE);
 		}
 	}
@@ -3154,6 +3154,15 @@ void sglRayTraceScene()
 	inputPoint4f nearP;
 	inputPoint4f farP;
 
+	Ray *ray;
+
+	float r, g, b;
+
+
+	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
+	float *colorBuffer = cont->getColorBuffer();
+	float *depthBuffer = cont->getDepthBuffer();
+
 	for (int row = 0; row < winHeight; ++row)
 	{
 		for (int col = 0; col < winWidth; ++col)
@@ -3181,6 +3190,20 @@ void sglRayTraceScene()
 			rDir[1] /= rLen;
 			rDir[2] /= rLen;
 			// here goes raytracing
+
+			r = g = b = 0;
+
+			ray = new Ray();
+
+			ray->start = rOrigin;
+			ray->dir = rDir;
+			ray->length = rLen;
+
+			traceRay(*ray, r, g, b);
+
+			//drawPixel(int offsetC, int offsetD, float z, float r, float g, float b, float *colorBuffer, float *depthBuffer)
+			drawPixel( row * winWidth * 3 + col * 3, row * winWidth + col, 0, r, g, b, colorBuffer, depthBuffer);
+
 		}
 	}
 }
