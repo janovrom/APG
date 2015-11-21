@@ -3076,6 +3076,7 @@ void sglSphere(const float x,
 	s->y = y;
 	s->z = z;
 	s->radius = radius;
+	s->mat = materialStack.back();
 	sphereStack.push_back(s);
 }
 
