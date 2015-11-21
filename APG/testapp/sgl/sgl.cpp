@@ -1588,9 +1588,9 @@ float dot( float *in1, float *in2)
 void normalize(float *out)
 {
 	float f = sqrt(dot(out, out));
-	out[0] *= f;
-	out[1] *= f;
-	out[2] *= f;
+	out[0] /= f;
+	out[1] /= f;
+	out[2] /= f;
 }
 
 bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
@@ -1666,6 +1666,7 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 		nor[0] = imp[0] - s.x;
 		nor[1] = imp[1] - s.y;
 		nor[2] = imp[2] - s.z;
+		normalize(nor);
 
 		float d = dot(ray.dir, nor);
 		if (d > 0)
@@ -1706,6 +1707,7 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 		normal[0] = impact[0] - s.x;
 		normal[1] = impact[1] - s.y;
 		normal[2] = impact[2] - s.z;
+		normalize(normal);
 	}else {
 		// no solution
 		return false;
@@ -1798,10 +1800,14 @@ void phongDiffuse(float *n, float *impact, PhongMaterial& m, PointLight& l, floa
 	normalize(toLight);
 
 	float d = dot(n, toLight);
-
 	r += l.r * m.kd * m.r * d;
 	g += l.g * m.kd * m.g * d;
 	b += l.b * m.kd * m.b * d;
+	/*
+	r = m.r;
+	g = m.g;
+	b = m.b;
+	*/
 }
 
 void copyVec(float *in, float *out)
@@ -1843,10 +1849,13 @@ void phongSpecular(float *n, float *dir, float *impact, PhongMaterial& m, PointL
 
 void setNoHitColor(float& r, float& g, float& b)
 {
-	r = 0.0f;
-	g = 0.0f;
-	b = 0.0f;
-	printf("sgl.cpp : setNoHitColor() is just temporal method. \n");
+	
+	r = colorClearR;
+	g = colorClearG;
+	b = colorClearB;
+	
+	
+	//printf("sgl.cpp : setNoHitColor() is just temporal method. \n");
 }
 
 void addEmissiveColor(EmissiveMaterial& m, float& r, float& g, float& b, float l)
