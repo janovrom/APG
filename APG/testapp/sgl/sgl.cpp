@@ -1721,7 +1721,8 @@ bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, flo
 
 	if(p.points.size() != 3 )
 	{
-		printf("POLYGON TRACING NOT SUPPORTED\N");
+		//printf("POLYGON TRACING NOT SUPPORTED\n");
+		//printf("%d \n", p.points.size());
 	}
 	v0 = p.points[0];
 	v1 = p.points[1];
@@ -1790,6 +1791,14 @@ bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, flo
 	return true;
 }
 
+
+float clip(float c)
+{
+	if (0 > 1.0f) { return 1.0f; }
+	if (0 < 0.0f) { return 0.0f; }
+	return c;
+}
+
 void phongDiffuse(float *n, float *impact, PhongMaterial& m, PointLight& l, float& r, float& g, float& b)
 {
 	float toLight[3];
@@ -1800,9 +1809,9 @@ void phongDiffuse(float *n, float *impact, PhongMaterial& m, PointLight& l, floa
 	normalize(toLight);
 
 	float d = dot(n, toLight);
-	r += l.r * m.kd * m.r * d;
-	g += l.g * m.kd * m.g * d;
-	b += l.b * m.kd * m.b * d;
+	r += clip(l.r * m.kd * m.r * d);
+	g += clip(l.g * m.kd * m.g * d);
+	b += clip(l.b * m.kd * m.b * d);
 	/*
 	r = m.r;
 	g = m.g;
@@ -1842,9 +1851,10 @@ void phongSpecular(float *n, float *dir, float *impact, PhongMaterial& m, PointL
 	float d = dot(reflected, toLight);
 	d = pow(d, m.shine);
 
-	r += l.r * m.ks * d;
-	g += l.g * m.ks * d;
-	b += l.b * m.ks * d;
+	r += clip(l.r * m.ks * d);
+	g += clip(l.g * m.ks * d);
+	b += clip(l.b * m.ks * d);
+	
 }
 
 void setNoHitColor(float& r, float& g, float& b)
@@ -2051,6 +2061,7 @@ void sglEnd(void)
 	// do not draw anything, if scene is being constructed
 	if (constructingScene)
 	{
+		hasBegun = false;
 		return;
 	}
 
