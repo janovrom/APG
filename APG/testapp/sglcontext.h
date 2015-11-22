@@ -502,6 +502,32 @@ public:
 		}
 	}
 
+	void GetRGBLinear(float row, float col, float *rgb)
+	{
+		float u = row - 0.5f;
+		float v = col - 0.5f;
+		int x = (int)floor(u);
+		int y = (int)floor(v);
+		float u_ratio = u - x;
+		float v_ratio = v - y;
+		float u_opposite = 1 - u_ratio;
+		float v_opposite = 1 - v_ratio;
+		rgb[0] = (colorBuffer[x *width * 3 + y * 3] * u_opposite + colorBuffer[(x + 1) *width * 3 + (y)* 3] * u_ratio) * v_opposite +
+			(colorBuffer[x *width * 3 + (y + 1) * 3] * u_opposite + colorBuffer[(x + 1) *width * 3 + (y + 1) * 3] * u_ratio) * v_ratio;
+		rgb[1] = (colorBuffer[x *width * 3 + y * 3 + 1] * u_opposite + colorBuffer[(x + 1) *width * 3 + (y)* 3 + 1] * u_ratio) * v_opposite +
+			(colorBuffer[x *width * 3 + (y + 1) * 3 + 1] * u_opposite + colorBuffer[(x + 1) *width * 3 + (y + 1) * 3 + 1] * u_ratio) * v_ratio;
+		rgb[2] = (colorBuffer[x *width * 3 + y * 3 + 2] * u_opposite + colorBuffer[(x + 1) *width * 3 + (y)* 3 + 2] * u_ratio) * v_opposite +
+			(colorBuffer[x *width * 3 + (y + 1) * 3 + 2] * u_opposite + colorBuffer[(x + 1) *width * 3 + (y + 1) * 3 + 2] * u_ratio) * v_ratio;
+	}
+
+	void GetRGB(int row, int col, float *rgb)
+	{
+		int w = width * 3;
+		rgb[0] = *(colorBuffer + row*w + col);
+		rgb[1] = *(colorBuffer + row*w + col + 1);
+		rgb[2] = *(colorBuffer + row*w + col + 2);
+	}
+
 	void clearDepth() {
 		for (int i = 0; i < height; ++i) {
 			for (int j = 0; j < width; ++j) {
