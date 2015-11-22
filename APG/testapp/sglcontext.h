@@ -46,12 +46,12 @@ private:
 		}
 	}
 public:
-	static enum WrapMode
+	enum WrapMode
 	{
 		SGL_CLAMP
 	};
 
-	static enum Filtering
+	enum Filtering
 	{
 		SGL_LINEAR,
 		SGL_NEAREST
@@ -88,8 +88,8 @@ public:
 			{
 				u = u - 0.5f;
 				v = v - 0.5f;
-				int x = floor(u);
-				int y = floor(v);
+				int x = (int)floor(u);
+				int y = (int)floor(v);
 				float u_ratio = u - x;
 				float v_ratio = v - y;
 				float u_opposite = 1 - u_ratio;
@@ -186,7 +186,7 @@ std::vector<PointLight*> lightStack;
 struct Primitive
 {
 public:
-	static enum PrimitiveType
+	enum PrimitiveType
 	{
 		POLYGON,
 		SPHERE
@@ -350,7 +350,7 @@ bool gluInvertMatrix(const float m[16], float invOut[16])
 	if (det == 0)
 		return false;
 
-	det = 1.0 / det;
+	det = 1.0f / det;
 
 	for (i = 0; i < 16; i++)
 		invOut[i] = inv[i] * det;
