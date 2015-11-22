@@ -150,8 +150,33 @@ void sglFinish(void) {
 		projectionStack.pop();
 	}
 	for (;!polygonQueue.empty();) {
-		delete &polygonQueue.front();
+		delete polygonQueue.front();
 		polygonQueue.pop_front();
+	}
+	while (!materialStack.empty())
+	{
+		delete materialStack.back();
+		materialStack.pop_back();
+	}
+	while (!sphereStack.empty())
+	{
+		delete sphereStack.back();
+		sphereStack.pop_back();
+	}
+	while (!lightStack.empty())
+	{
+		delete lightStack.back();
+		lightStack.pop_back();
+	}
+	while (!polygonQueue.empty())
+	{
+		delete polygonQueue.front();
+		polygonQueue.pop_front();
+	}
+	while (!textureStack.empty())
+	{
+		delete textureStack.back();
+		textureStack.pop_back();
 	}
 }
 
@@ -1573,19 +1598,19 @@ void drawPoints()
 	polygonQueue.pop_front();
 }
 
-void cross(float *out, float *in1, float *in2)
+inline void cross(float *out, float *in1, float *in2)
 {
 	out[0] = in1[1] * in2[2] - in1[2] * in2[1];
 	out[1] = in1[2] * in2[0] - in1[0] * in2[2];
 	out[2] = in1[0] * in2[1] - in1[1] * in2[0];
 }
 
-float dot( float *in1, float *in2)
+inline float dot( float *in1, float *in2)
 {
 	return in1[0] * in2[0] + in1[1] * in2[1] + in1[2] * in2[2];
 }
 
-void normalize(float *out)
+inline void normalize(float *out)
 {
 	float f = sqrt(dot(out, out));
 	out[0] /= f;
@@ -1897,9 +1922,9 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 	float impact[3];
 	float normal[3];
 	float len = ray.length;
-	Material *m;
+	Material *m = NULL;
 	PhongMaterial *mP;
-	EmissiveMaterial *mE;
+	EmissiveMaterial *mE = NULL;
 	Texture *t;
 
 	bool hit = false;
@@ -3175,7 +3200,7 @@ void sglRayTraceScene()
 	inputPoint4f nearP;
 	inputPoint4f farP;
 
-	Ray *ray;
+	//Ray *ray;
 
 	float r, g, b;
 
@@ -3214,17 +3239,17 @@ void sglRayTraceScene()
 
 			r = g = b = 0;
 
-			ray = new Ray();
+			//ray = new Ray();
+			Ray ray;
+			ray.start = rOrigin;
+			ray.dir = rDir;
+			ray.length = rLen;
 
-			ray->start = rOrigin;
-			ray->dir = rDir;
-			ray->length = rLen;
-
-			traceRay(*ray, r, g, b);
+			traceRay(ray, r, g, b);
 
 			//drawPixel(int offsetC, int offsetD, float z, float r, float g, float b, float *colorBuffer, float *depthBuffer)
 			drawPixel( row * winWidth * 3 + col * 3, row * winWidth + col, 0, r, g, b, colorBuffer, depthBuffer);
-
+			//delete ray;
 		}
 	}
 }
