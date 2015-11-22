@@ -514,7 +514,7 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 			//setPixel(x0 + i, y0 + i*k);
 			lerpValue = (float)i / endValue;
 			tempX = x0 + i;
-			tempY = y0 + i*k;
+			tempY = (int)(y0 + i*k);
 
 			if (tempX >= 0 && tempX < W && tempY >= 0 && tempY < H)
 			{
@@ -556,7 +556,7 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 		for (int i = 0; i <= endValue; i++) {
 			//setPixel(x0 + i*k, y0 + i);
 			lerpValue = (float)i / endValue;
-			tempX = x0 + i*k;
+			tempX = (int)(x0 + i*k);
 			tempY = y0 + i;
 
 			if (tempX >= 0 && tempX < W && tempY >= 0 && tempY < H)
@@ -1334,7 +1334,7 @@ void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 
 			stepZLeft = (p2->z - p3->z) / stepCount;
 			stepZRight = (splittingPoint.z - p3->z) / stepCount;
-			zInitLeft = zInitRight = (int)p3->z;
+			zInitLeft = zInitRight = p3->z;
 
 
 			//prepare startingColor left and right
@@ -1384,7 +1384,7 @@ void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 
 			stepZLeft = (splittingPoint.z - p1->z) / stepCount;
 			stepZRight = (p2->z - p1->z) / stepCount;
-			zInitLeft = zInitRight = (int)p1->z;
+			zInitLeft = zInitRight = p1->z;
 
 
 			//prepare startingColor left and right
@@ -1433,7 +1433,7 @@ void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 
 			stepZLeft = (splittingPoint.z - p3->z) / stepCount;
 			stepZRight = (p2->z - p3->z) / stepCount;
-			zInitLeft = zInitRight = (int)p3->z;
+			zInitLeft = zInitRight = p3->z;
 
 
 			//prepare startingColor left and right
@@ -2291,8 +2291,8 @@ inline void setPixel(float x0, float y0, float r, float g, float b, float z)
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = round(x0);
-	y = round(y0);
+	x = (int)round(x0);
+	y = (int)round(y0);
 
 	float *colorBuffer = cont->getColorBuffer();
 	//printf("drawing: %d %d\n", x, y);
@@ -2350,11 +2350,11 @@ void sglCircle(float x, float y, float z, float radius) {
 		// Bresenham's algorithm for drawing circle
 		//printf("circle line\n");
 		xp = 0;
-		yp = radius;
-		p = 3 - 2 * radius;
+		yp = (int)radius;
+		p = (int)(3 - 2 * radius);
 			//printf("%f %f \n", xp, yp);
 		while (xp < yp) {
-			setSymPoints(xp, yp, x, y, point);
+			setSymPoints(xp, yp, (int)x, (int)y, point);
 			if (p < 0) {
 				p = p + 4 * xp + 6;
 			}
@@ -2365,7 +2365,7 @@ void sglCircle(float x, float y, float z, float radius) {
 			++xp;
 		}
 		if (xp == yp)
-			setSymPoints(xp, yp, x, y, point);
+			setSymPoints(xp, yp, (int)x, (int)y, point);
 
 		break;
 	case SGL_FILL:
