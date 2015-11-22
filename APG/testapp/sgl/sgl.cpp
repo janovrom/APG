@@ -9,7 +9,8 @@
 #include "sglcontext.h"
 #include <limits>
 
-#define EPSILON 0.000001
+#define EPSILON 0.000001f
+#define EPS 0.000001f
 
 //#define LINE_NAIVE
 // decides which ellipse algoritm should be used
@@ -1011,7 +1012,7 @@ void drawMeAPolygon()
 		inputPoint4f *tempPoint2;
 
 		inputPoint4f *tempTempPoint;
-		
+
 		int top = -std::numeric_limits<int>::max();
 		int bottom = std::numeric_limits<int>::max();
 		//printf("limits - top %d bottom %d\n", top, bottom);
@@ -1626,25 +1627,23 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 
 	float len;
 
-	a = 1;
-
 	temp[0] = ray.start[0] - s.x;
 	temp[1] = ray.start[1] - s.y;
 	temp[2] = ray.start[2] - s.z;
 
 	b = 2 * dot(ray.dir,temp);
 	c = dot(temp, temp) - s.radius*s.radius;
-	D = b*b - 4 * a*c;
+	D = b*b - 4 * c;
 
-	if ( D > 0)
+	if ( D > EPS)
 	{
 		// 2 solutions
-		float t0, t1, Ds;
+		double t0, t1, Ds;
 
 		Ds = sqrt(D);
 
-		t0 = (-b + Ds) / (2 * a);
-		t1 = (-b - Ds) / (2 * a);
+		t0 = (-b + Ds) /2;
+		t1 = (-b - Ds) /2;
 
 		if ( t0 > 0 && t0 < ray.length)
 		{
@@ -1670,7 +1669,7 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 		}
 		else {
 			//t0 is invalid or too long
-			if(t0 > 0 && t0 < ray.length)
+			if(t1 > 0 && t1 < ray.length)
 			{
 				//t1 is valid and short enough
 				// -> t1
@@ -1681,6 +1680,7 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 				len = t1;
 			}else {
 				//none is valid
+				//printf("both invalid \n");
 				return false;
 			}
 		}
@@ -1694,6 +1694,7 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 		if (d > 0)
 		{
 			//backface culling
+			//printf("backface culling \n");
 			return false;
 		}
 
@@ -1707,16 +1708,19 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 		normal[1] = nor[1];
 		normal[2] = nor[2];
 
-	}else if (D == 0) {
+
+	}else if (-EPS < D) {
+		//printf("lucky hit \n");
 		// 1 solution
 		float t;
 
-		t = (-b) / (2 * a);
+		t = (-b) /2;
 
 		if (t < 0 || t > ray.length)
 		{
 			// t is invalid or too long
 			return false;
+			//printf("side hit cull\n");
 		}
 
 		length = t;
@@ -1732,6 +1736,7 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 
 	}else {
 		// no solution
+		//printf(" %f %f %f %f %f \n",D, ray.length, a, b, c);
 		return false;
 	}
 	return true;
@@ -1817,8 +1822,8 @@ bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, flo
 
 float clip(float c)
 {
-	if (0 > 1.0f) { return 1.0f; }
-	if (0 < 0.0f) { return 0.0f; }
+	if (c > 1.0f) { return 1.0f; }
+	if (c < 0.0f) { return 0.0f; }
 	return c;
 }
 
@@ -1872,6 +1877,8 @@ void phongSpecular(float *n, float *dir, float *impact, PhongMaterial& m, PointL
 	reflect(dir, n, reflected);
 
 	float d = dot(reflected, toLight);
+
+	if (d < 0.0f) { return; }
 	d = pow(d, m.shine);
 
 	r += clip(l.r * m.ks * d);
@@ -1905,6 +1912,7 @@ Method to find intersections of ray with scene. Returned color will be computed 
 */
 bool traceRay(Ray& ray, float& r, float& g, float &b)
 {
+
 	std::deque<Polygon *>::iterator itD;
 	std::vector<Polygon *>::iterator itE; 
 	std::vector<PointLight*>::iterator itL; 
