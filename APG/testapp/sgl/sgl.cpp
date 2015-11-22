@@ -1906,10 +1906,11 @@ void setNoHitColor(float& r, float& g, float& b)
 
 void addEmissiveColor(EmissiveMaterial& m, float& r, float& g, float& b, float l)
 {
-	r += m.r;
-	g += m.g;
-	b += m.b;
-	printf("sgl.cpp : addEmissiveColor() not implemented yet. \n");
+	float d = 1.0f / (m.a0 + l * m.a1 + l * l * m.a2);
+	r += m.r * d;
+	g += m.g * d;
+	b += m.b * d;
+	//printf("sgl.cpp : addEmissiveColor() not implemented yet. \n");
 
 }
 
