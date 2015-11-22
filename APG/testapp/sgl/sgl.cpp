@@ -261,8 +261,8 @@ void setPixel(float x0, float y0, float r, float g, float b)
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	W = cont->getWidth();
 	H = cont->getHeight();
-	x = round(x0);
-	y = round(y0);
+	x = (int)round(x0);
+	y = (int)round(y0);
 
 	float *colorBuffer = cont->getColorBuffer();
 	//printf("drawing: %d %d\n", x, y);
@@ -479,10 +479,10 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 
 	float z0, z1, dz;
 
-	x0 = startT.x;
-	y0 = startT.y;
-	x1 = endT.x;
-	y1 = endT.y;
+	x0 = (int)startT.x;
+	y0 = (int)startT.y;
+	x1 = (int)endT.x;
+	y1 = (int)endT.y;
 
 	z0 = startT.z;
 	z1 = endT.z;
@@ -503,9 +503,9 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 			y0 = y1;
 			y1 = swap;
 
-			swap = z0;
+			swap = (int)z0;
 			z0 = z1;
-			z1 = swap;
+			z1 = (float)swap;
 		}
 		dz = (z1 - z0) / (x1 - x0);
 		k = (float)(y1 - y0) / (x1 - x0);
@@ -546,9 +546,9 @@ void drawMeALineNaive(inputPoint4f* start, inputPoint4f* end)
 			y0 = y1;
 			y1 = swap;
 
-			swap = z0;
+			swap = (int)z0;
 			z0 = z1;
-			z1 = swap;
+			z1 = (float)swap;
 		}
 		dz = (z1 - z0) / (y1 - y0);
 		k = (float)(x1 - x0) / (y1 - y0);
@@ -606,10 +606,10 @@ void drawMeALineBresenham(inputPoint4f* start, inputPoint4f* end)
 	transformThePointAndCopyColor(end, endT);
 
 	//setup variables to work with
-	x0 = (startT).x;
-	y0 = (startT).y;
-	x1 = (endT).x;
-	y1 = (endT).y;
+	x0 = (int)(startT).x;
+	y0 = (int)(startT).y;
+	x1 = (int)(endT).x;
+	y1 = (int)(endT).y;
 
 	int dx, dy;
 
@@ -808,15 +808,15 @@ void setPolyEdge(polyEdge *end, inputPoint4f *high, inputPoint4f *low)
 	int stepCount;
 	float step;
 
-	end->Y_upper = high->y;
-	end->Y_lower = low->y + 1;
+	end->Y_upper = (int)high->y;
+	end->Y_lower = (int)(low->y + 1);
 	stepCount = end->Y_upper - end->Y_lower + 1;
 
 	step = (low->x - high->x) / (high->y - low->y);
 	end->X_step = step;
 	//printf("correction %f \n", ((float)(high->y) - (int)(high->y))*step);
 	end->X_upper = high->x;// +((float)(high->y) - (int)(high->y))*step;
-	end->X_cross = end->X_upper;
+	end->X_cross = (int)end->X_upper;
 
 	end->R = high->r;
 	end->G = high->g;
@@ -967,7 +967,7 @@ void listDecrementActiveAndRemove(polyEdge *root, polyEdge *end)
 		if (current->Y_upper >= current->Y_lower)
 		{
 			current->X_upper += current->X_step;
-			current->X_cross = current->X_upper;
+			current->X_cross = (int)current->X_upper;
 
 			current->R += current->RD;
 			current->G += current->GD;
@@ -1011,9 +1011,6 @@ void drawMeAPolygon()
 		inputPoint4f *tempPoint2;
 
 		inputPoint4f *tempTempPoint;
-
-		inputPoint4f pointStart;
-		inputPoint4f pointEnd;
 		
 		int top = -std::numeric_limits<int>::max();
 		int bottom = std::numeric_limits<int>::max();
@@ -1056,8 +1053,8 @@ void drawMeAPolygon()
 			(polygonQueue.front())->points.pop_front();
 			counter++;
 
-			int tempInt1 = tempPoint1->y;
-			int tempInt2 = tempPoint2->y;
+			int tempInt1 = (int)tempPoint1->y;
+			int tempInt2 = (int)tempPoint2->y;
 
 			if (tempInt1 > tempInt2)
 			{
@@ -1068,8 +1065,8 @@ void drawMeAPolygon()
 				endPrepared->next = new polyEdge;
 				endPrepared = endPrepared->next;
 
-				if (tempPoint1->y > top) { top = tempPoint1->y; }
-				if (tempPoint2->y < bottom) { bottom = tempPoint2->y; }
+				if (tempPoint1->y > top) { top = (int)tempPoint1->y; }
+				if (tempPoint2->y < bottom) { bottom = (int)tempPoint2->y; }
 				delete tempPoint1;
 
 				debugCount++;
@@ -1081,8 +1078,8 @@ void drawMeAPolygon()
 				endPrepared->next = new polyEdge;
 				endPrepared = endPrepared->next;
 
-				if (tempPoint2->y > top) { top = tempPoint2->y; }
-				if (tempPoint1->y < bottom) { bottom = tempPoint1->y; }
+				if (tempPoint2->y > top) { top = (int)tempPoint2->y; }
+				if (tempPoint1->y < bottom) { bottom = (int)tempPoint1->y; }
 				delete tempPoint1;
 
 				debugCount++;
@@ -1274,14 +1271,14 @@ void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 		//p2 is lefter
 		{
 			//upper triangle
-			yStart = p1->y;
+			yStart = (int)p1->y;
 			yCurrent = yStart;
-			yEnd = p2->y;
+			yEnd = (int)p2->y;
 			stepCount = yStart - yEnd;
 
 			stepXLeft = (p2->x - p1->x) / stepCount;
 			stepXRight = (splittingPoint.x - p1->x) / stepCount;
-			xInitLeft = xInitRight = p1->x;
+			xInitLeft = xInitRight = (int)p1->x;
 
 			stepZLeft = (p2->z - p1->z) / stepCount;
 			stepZRight = (splittingPoint.z - p1->z) / stepCount;
@@ -1326,18 +1323,18 @@ void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 
 		{
 			//lower triangle
-			yStart = p3->y;
+			yStart = (int)p3->y;
 			yCurrent = yStart;
-			yEnd = p2->y;
+			yEnd = (int)p2->y;
 			stepCount = yEnd - yStart;
 
 			stepXLeft = (p2->x - p3->x) / stepCount;
 			stepXRight = (splittingPoint.x - p3->x) / stepCount;
-			xInitLeft = xInitRight = p3->x;
+			xInitLeft = xInitRight = (int)p3->x;
 
 			stepZLeft = (p2->z - p3->z) / stepCount;
 			stepZRight = (splittingPoint.z - p3->z) / stepCount;
-			zInitLeft = zInitRight = p3->z;
+			zInitLeft = zInitRight = (int)p3->z;
 
 
 			//prepare startingColor left and right
@@ -1376,18 +1373,18 @@ void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 		//splitting point is lefter
 		{
 			//upper triangle
-			yStart = p1->y;
+			yStart = (int)p1->y;
 			yCurrent = yStart;
-			yEnd = splittingPoint.y;
+			yEnd = (int)splittingPoint.y;
 			stepCount = yStart - yEnd;
 
 			stepXLeft = (splittingPoint.x - p1->x) / stepCount;
 			stepXRight = (p2->x - p1->x) / stepCount;
-			xInitLeft = xInitRight = p1->x;
+			xInitLeft = xInitRight = (int)p1->x;
 
 			stepZLeft = (splittingPoint.z - p1->z) / stepCount;
 			stepZRight = (p2->z - p1->z) / stepCount;
-			zInitLeft = zInitRight = p1->z;
+			zInitLeft = zInitRight = (int)p1->z;
 
 
 			//prepare startingColor left and right
@@ -1425,18 +1422,18 @@ void drawMeATriangle(inputPoint4f* t1, inputPoint4f* t2, inputPoint4f* t3)
 
 		{
 			//lower triangle
-			yStart = p3->y;
+			yStart = (int)p3->y;
 			yCurrent = yStart;
-			yEnd = splittingPoint.y;
+			yEnd = (int)splittingPoint.y;
 			stepCount = yEnd - yStart;
 
 			stepXLeft = (splittingPoint.x - p3->x) / stepCount;
 			stepXRight = (p2->x - p3->x) / stepCount;
-			xInitLeft = xInitRight = p3->x;
+			xInitLeft = xInitRight = (int)p3->x;
 
 			stepZLeft = (splittingPoint.z - p3->z) / stepCount;
 			stepZRight = (p2->z - p3->z) / stepCount;
-			zInitLeft = zInitRight = p3->z;
+			zInitLeft = zInitRight = (int)p3->z;
 
 
 			//prepare startingColor left and right
@@ -1710,7 +1707,6 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 		normal[1] = nor[1];
 		normal[2] = nor[2];
 
-
 	}else if (D == 0) {
 		// 1 solution
 		float t;
@@ -1733,10 +1729,12 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 		normal[1] = impact[1] - s.y;
 		normal[2] = impact[2] - s.z;
 		normalize(normal);
+
 	}else {
 		// no solution
 		return false;
 	}
+	return true;
 }
 
 bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, float *normal)
@@ -1981,6 +1979,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 				phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
 			}
 		}
+		return true;
 	}else {
 		setNoHitColor(r, g, b);
 		return false;
@@ -2227,37 +2226,37 @@ different places.
 @param point input point with stored colors
 */
 void setSymPoints(int x, int y, int xs, int ys, inputPoint4f& point) {
-	point.x = x + xs;
-	point.y = y + ys;
+	point.x = (float)(x + xs);
+	point.y = (float)(y + ys);
 	//drawPointNoTransform(point);
 	setPixel(point.x,point.y, point.r, point.g, point.b, point.z);
 
-	point.x = xs - x;
+	point.x = (float)(xs - x);
 	//drawPointNoTransform(point);
 	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 
-	point.y = ys - y;
+	point.y = (float)(ys - y);
 	//drawPointNoTransform(point);
 	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 
-	point.x = x + xs;
+	point.x = (float)(x + xs);
 	//drawPointNoTransform(point);
 	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 	
-	point.x = y + xs;
-	point.y = x + ys;
+	point.x = (float)(y + xs);
+	point.y = (float)(x + ys);
 	//drawPointNoTransform(point);
 	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 
-	point.x = xs - y;
+	point.x = (float)(xs - y);
 	//drawPointNoTransform(point);
 	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 
-	point.y = ys - x;
+	point.y = (float)(ys - x);
 	//drawPointNoTransform(point);
 	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 
-	point.x = y + xs;
+	point.x = (float)(y + xs);
 	//drawPointNoTransform(point);
 	setPixel(point.x, point.y, point.r, point.g, point.b, point.z);
 }
@@ -2372,10 +2371,10 @@ void sglCircle(float x, float y, float z, float radius) {
 	case SGL_FILL:
 		// Bresenham's algorithm for drawing circle
 		xp = 0;
-		yp = radius;
-		p = 3 - 2 * radius;
+		yp = (int)radius;
+		p = (int)(3 - 2 * radius);
 		while (xp < yp) {
-			setSymPointsFillLine(xp, yp, x, y, z, point);
+			setSymPointsFillLine(xp, yp, (int)x, (int)y, z, point);
 			if (p < 0) {
 				p = p + 4 * xp + 6;
 			}
@@ -2386,7 +2385,7 @@ void sglCircle(float x, float y, float z, float radius) {
 			++xp;
 		}
 		if (xp == yp)
-			setSymPointsFillLine(xp, yp, x, y, z, point);
+			setSymPointsFillLine(xp, yp, (int)x, (int)y, z, point);
 
 		//printf("No Circle filling algorithm implemented right now.\n");
 		break;
@@ -2513,7 +2512,7 @@ void sglEllipseSegmented(float x, float y, float z, float a, float b)
 
 	int segments = 40;
 	float angle = 0.0f;
-	float delta = 2.0f * 3.14159 / segments;
+	float delta = 2.0f * 3.14159f / segments;
 	for (int i = 0; i <= segments; i++)
 	{
 		sglVertex3f(x + a*cos(angle), y + b*sin(angle), z);
@@ -2542,61 +2541,61 @@ Bresenham's algorithm for drawing circle, though limited by minimal and maximal 
 @param to Maximum angle for arc.
 */
 void setSymPointsLimit(int x, int y, int xs, int ys, inputPoint4f *point, float radius, float from, float to) {
-	point->x = x + xs;
-	point->y = y + ys;
+	point->x = (float)(x + xs);
+	point->y = (float)(y + ys);
 	float angle = acos(x / radius);
 	if (y < 0)
-		angle = -angle + 2 * 3.14159274;
+		angle = -angle + 2 * 3.14159274f;
 	if (angle >= from && angle <= to)
 		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
-	point->x = xs - x;
+	point->x = (float)(xs - x);
 	angle = acos(-x / radius);
 	if (y < 0)
-		angle = -angle + 2 * 3.14159274;
+		angle = -angle + 2 * 3.14159274f;
 	if (angle >= from && angle <= to)
 		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
-	point->y = ys - y;
+	point->y = (float)(ys - y);
 	angle = acos(-x / radius);
 	if (-y < 0)
-		angle = -angle + 2 * 3.14159274;
+		angle = -angle + 2 * 3.14159274f;
 	if (angle >= from && angle <= to)
 		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
-	point->x = x + xs;
+	point->x = (float)(x + xs);
 	angle = acos(x / radius);
 	if (-y < 0)
-		angle = -angle + 2 * 3.14159274;
+		angle = -angle + 2 * 3.14159274f;
 	if (angle >= from && angle <= to)
 		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
-	point->x = y + xs;
-	point->y = x + ys;
+	point->x = (float)(y + xs);
+	point->y = (float)(x + ys);
 	angle = acos(y / radius);
 	if (x < 0)
-		angle = -angle + 2 * 3.14159274;
+		angle = -angle + 2 * 3.14159274f;
 	if (angle >= from && angle <= to)
 		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
-	point->x = xs - y;
+	point->x = (float)(xs - y);
 	angle = acos(-y / radius);
 	if (x < 0)
-		angle = -angle + 2 * 3.14159274;
+		angle = -angle + 2 * 3.14159274f;
 	if (angle >= from && angle <= to)
 		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
-	point->y = ys - x;
+	point->y = (float)(ys - x);
 	angle = acos(-y / radius);
 	if (-x < 0)
-		angle = -angle + 2 * 3.14159274;
+		angle = -angle + 2 * 3.14159274f;
 	if (angle >= from && angle <= to)
 		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 
-	point->x = y + xs;
+	point->x = (float)(y + xs);
 	angle = acos(y / radius);
 	if (-x < 0)
-		angle = -angle + 2 * 3.14159274;
+		angle = -angle + 2 * 3.14159274f;
 	if (angle >= from && angle <= to)
 		setPixel(point->x, point->y, point->r, point->g, point->b, point->z);
 }
@@ -3016,7 +3015,7 @@ void sglPointSize(float size)
 		setErrCode(SGL_INVALID_OPERATION); 
 		return;
 	}
-	pointSize = size;
+	pointSize = (short)size;
 }
 
 void sglEnable(sglEEnableFlags cap) {
