@@ -11,6 +11,12 @@
 
 #define EPSILON 0.000001f
 #define EPS 0.000001f
+/// Trims the algorithm from processing dark areas.
+#define FXAA_REDUCE_MIN   1.0f/128.0f
+/// The minimum of local contrast required to apply algorithm.
+#define FXAA_REDUCE_MUL   1.0f/8.0f
+/// Trims the algorithm from processing light areas.
+#define FXAA_SPAN_MAX     8.0f
 
 //#define LINE_NAIVE
 // decides which ellipse algoritm should be used
@@ -3259,6 +3265,101 @@ void sglRayTraceScene()
 			//delete ray;
 		}
 	}
+	SglContext *c = contextWrapper[contextWrapper.activeContext];
+	float luma[3] = {0.299f, 0.587f, 0.114f};
+	float rgbM[3];
+	float rgbNW[3];
+	float rgbNE[3];
+	float rgbSW[3];
+	float rgbSE[3];
+	float rgbA[3], rgbB[3], rgbTmp[3];
+
+	float *buffer = new float[(int)(winWidth * winHeight * 3)];
+
+	// for FXAA we have to access one element to the left, right, up and down, so don't start at image edges
+	for (int row = 1; row < winHeight - 1; ++row)
+	{
+		for (int col = 1; col < winWidth - 1; ++col)
+		{
+			
+			c->GetRGB(row, col, rgbM);
+			c->GetRGB(row-1, col-1, rgbNW);
+			c->GetRGB(row+1, col-1, rgbNE);
+			c->GetRGB(row-1, col+1, rgbSW);
+			c->GetRGB(row+1, col+1, rgbSE);
+			
+			float lumaNW = dot(rgbNW, luma);
+			float lumaNE = dot(rgbNE, luma);
+			float lumaSW = dot(rgbSW, luma);
+			float lumaSE = dot(rgbSE, luma);
+			float lumaM = dot(rgbM, luma);
+
+			float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));
+			float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
+
+			float dirX = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
+			float dirY = ((lumaNW + lumaSW) - (lumaNE + lumaSE));
+
+			float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * (0.25f * FXAA_REDUCE_MUL), FXAA_REDUCE_MIN);
+			float rcpDirMin = (min(abs(dirX), abs(dirY)) + dirReduce);
+
+			dirX = min(FXAA_SPAN_MAX, max(-FXAA_SPAN_MAX, dirX * rcpDirMin));
+			dirY = min(FXAA_SPAN_MAX, max(-FXAA_SPAN_MAX, dirY * rcpDirMin));
+
+			c->GetRGBLinear(row + dirY * (1.0f / 3.0f - 0.5f), col + dirX * (1.0f / 3.0f - 0.5f), rgbTmp);
+			c->GetRGBLinear(row + dirY * (2.0f / 3.0f - 0.5f), col + dirX * (2.0f / 3.0f - 0.5f), rgbA);
+			rgbA[0] += rgbTmp[0];
+			rgbA[1] += rgbTmp[1];
+			rgbA[2] += rgbTmp[2];
+			rgbA[0] *= 0.5f;
+			rgbA[1] *= 0.5f;
+			rgbA[2] *= 0.5f;
+			c->GetRGBLinear(row + dirY * (-0.5f), col + dirX * (-0.5f), rgbTmp);
+			rgbB[0] = rgbTmp[0];
+			rgbB[1] = rgbTmp[1];
+			rgbB[2] = rgbTmp[2];
+			c->GetRGBLinear(row + dirY * (0.5f), col + dirX * (0.5f), rgbTmp);
+			rgbB[0] += rgbTmp[0];
+			rgbB[1] += rgbTmp[1];
+			rgbB[2] += rgbTmp[2];
+			rgbB[0] *= 0.25f;
+			rgbB[1] *= 0.25f;
+			rgbB[2] *= 0.25f;
+			rgbB[0] += 0.5f * rgbA[0];
+			rgbB[1] += 0.5f * rgbA[1];
+			rgbB[2] += 0.5f * rgbA[2];
+
+			float lumaB = dot(rgbB, luma);
+
+			if (lumaB < lumaMin || lumaB > lumaMax)
+			{
+				*(buffer + (int)(row * winWidth * 3 + col * 3)) = rgbA[0];
+				*(buffer + (int)(row * winWidth * 3 + col * 3 + 1)) = rgbA[1];
+				*(buffer + (int)(row * winWidth * 3 + col * 3 + 2)) = rgbA[2];
+			}
+			else
+			{
+				*(buffer + (int)(row * winWidth * 3 + col * 3)) = rgbB[0];
+				*(buffer + (int)(row * winWidth * 3 + col * 3 + 1)) = rgbB[1];
+				*(buffer + (int)(row * winWidth * 3 + col * 3 + 2)) = rgbB[2];
+			}
+			//*(buffer + (int)(row * winWidth * 3 + col * 3)) = sqrtf(dirX * dirX + dirY * dirY);
+			//*(buffer + (int)(row * winWidth * 3 + col * 3 + 1)) = sqrtf(dirX * dirX + dirY * dirY);
+			//*(buffer + (int)(row * winWidth * 3 + col * 3 + 2)) = sqrtf(dirX * dirX + dirY * dirY);
+		}
+	}
+	float *cb = c->getColorBuffer();
+	// copy temporary color buffer to real buffer
+	for (int row = 1; row < winHeight - 1; ++row)
+	{
+		for (int col = 1; col < winWidth - 1; ++col)
+		{
+			*(cb + (int)(row * winWidth * 3 + col * 3)) = buffer[(int)(row * winWidth * 3 + col * 3)];
+			*(cb + (int)(row * winWidth * 3 + col * 3 + 1)) = buffer[(int)(row * winWidth * 3 + col * 3 + 1)];
+			*(cb + (int)(row * winWidth * 3 + col * 3 + 2)) = buffer[(int)(row * winWidth * 3 + col * 3 + 2)];
+		}
+	}
+	delete[] buffer;
 }
 
 void sglRasterizeScene() {}
