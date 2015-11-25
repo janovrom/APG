@@ -10,7 +10,8 @@
 #include <limits>
 
 #define EPSILON 0.000001f
-#define EPS 0.000001f
+
+#define DIR_OFFSET 0.001f
 /// Trims the algorithm from processing dark areas.
 #define FXAA_REDUCE_MIN   1.0f/128.0f
 /// The minimum of local contrast required to apply algorithm.
@@ -18,9 +19,14 @@
 /// Trims the algorithm from processing light areas.
 #define FXAA_SPAN_MAX     8.0f
 
+#define ADVANCED_SHADING
+#define FXAA
+
 //#define LINE_NAIVE
 // decides which ellipse algoritm should be used
 #define ELLIPSE
+
+#define MAX_RAY_DEPTH 3
 
 using namespace std;
 
@@ -345,15 +351,15 @@ void sglBegin(sglEElementType mode)
 		p->mat = materialStack.back();
 		if (p->mat->type == MaterialType::EMISSIVE)
 			emissivePolygonStack.push_back(p);
-	}
-	else
-	{
+	}else{
 		p->mat = NULL;
 	}
 	if (!textureStack.empty())
+	{
 		p->tex = textureStack.back();
-	else
+	}else {
 		p->tex = NULL;
+	}
 }
 
 /*
@@ -1622,11 +1628,16 @@ inline void normalize(float *out)
 	out[2] /= f;
 }
 
+inline float length(float *in)
+{
+	return sqrt(dot(in,in));
+}
+
 bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
 {
 	//printf("sgl.cpp: collideWithSphere not implemented yet. \n");
 
-	float a, b, c, D;
+	float b, c, D;
 	float temp[3];
 	float imp[3];
 	float nor[3];
@@ -1641,10 +1652,10 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 	c = dot(temp, temp) - s.radius*s.radius;
 	D = b*b - 4 * c;
 
-	if ( D > EPS)
+	if ( D > EPSILON)
 	{
 		// 2 solutions
-		double t0, t1, Ds;
+		float t0, t1, Ds;
 
 		Ds = sqrt(D);
 
@@ -1715,7 +1726,7 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 		normal[2] = nor[2];
 
 
-	}else if (-EPS < D) {
+	}else if (-EPSILON < D) {
 		//printf("lucky hit \n");
 		// 1 solution
 		float t;
@@ -1919,6 +1930,8 @@ Method to find intersections of ray with scene. Returned color will be computed 
 */
 bool traceRay(Ray& ray, float& r, float& g, float &b)
 {
+	// too deep
+	if (ray.depth > MAX_RAY_DEPTH) { return false; }
 
 	std::deque<Polygon *>::iterator itD;
 	std::vector<Polygon *>::iterator itE; 
@@ -1928,6 +1941,8 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 	//std::deque<Polygon*> polygonQueue;
 	//std::vector<Polygon*> emissivePolygonStack;
 	//std::vector<PointLight*> lightStack;
+	//std::vector<Sphere*> sphereStack;
+
 	Polygon *p;
 	Sphere *s;
 	PointLight *l;
@@ -1982,21 +1997,113 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 			mE = static_cast<EmissiveMaterial *>(m);
 
 			addEmissiveColor(*mE, r, g, b, ray.length);
-		}
-		else {
+		}else {
 
+			mP = static_cast<PhongMaterial *>(m);
+		#ifdef ADVANCED_SHADING
+			// shadow, reflected and refracted rays
 			itL = lightStack.begin();
+			Ray ra;
+			float orig[3];
+			float dire[3];
+			float tmpR, tmpG, tmpB;
+			float tmpRAdd, tmpGAdd, tmpBAdd;
+			tmpR = tmpG = tmpB = 0;
+			float d, len;
+
+			mP = static_cast<PhongMaterial *>(m);
+			for (; itL != lightStack.end(); itL++)
+			{
+				tmpRAdd = tmpGAdd = tmpBAdd = 0;
+				l = *itL;
+				dire[0] = l->x - impact[0];
+				dire[1] = l->y - impact[1];
+				dire[2] = l->z - impact[2];
+				len = length(dire);
+				normalize(dire);
+
+				orig[0] = impact[0] + DIR_OFFSET * dire[0];
+				orig[1] = impact[1] + DIR_OFFSET * dire[1];
+				orig[2] = impact[2] + DIR_OFFSET * dire[2];
+
+
+				ra.dir = dire;
+				ra.start = orig;
+				ra.length = len;
+				ra.depth = ray.depth + 1;
+				ra.defR = l->r;
+				ra.defG = l->g;
+				ra.defB = l->b;
+
+
+				d = dot(normal, ra.dir);
+				//d = 1;
+				//clip(d);
+				//if (d == 0.0f) { continue; }
+
+				if (traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd))
+				{
+					//phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
+				}
+
+				tmpR += d * tmpRAdd * mP->kd * mP->r;
+				tmpG += d * tmpGAdd * mP->kd * mP->g;
+				tmpB += d * tmpBAdd * mP->kd * mP->b;
+
+
+				
+			}
+			//reflection?
+			mP->ks = 1;
+			if (mP->ks > 0.0f)
+			{
+				tmpRAdd = tmpGAdd = tmpBAdd = 0;
+				//reflection
+				dire[0] = dire[1] = dire[2] = 0.0f;
+				reflect(ray.dir, normal, dire);
+				orig[0] = impact[0] + DIR_OFFSET * dire[0];
+				orig[1] = impact[1] + DIR_OFFSET * dire[1];
+				orig[2] = impact[2] + DIR_OFFSET * dire[2];
+
+				ra.dir = dire;
+				ra.start = orig;
+				ra.length = std::numeric_limits<float>::max();
+				ra.depth = ray.depth + 1;
+
+				setNoHitColor(ra.defR, ra.defG, ra.defB);
+
+				traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd);
+
+				
+				tmpR += clip(tmpRAdd * mP->ks);
+				tmpG += clip(tmpGAdd * mP->ks);
+				tmpB += clip(tmpBAdd * mP->ks);
+				
+			}
+
+
+			// ADD TEMP COLOR (tmpR, tmpG, tmpB) TO R, G, B
+			r = tmpR;
+			g = tmpG;
+			b = tmpB;
+		#else
+			//phong shading for all
+			itL = lightStack.begin();
+			mP = static_cast<PhongMaterial *>(m);
 			for (; itL != lightStack.end(); itL++)
 			{
 				l = *itL;
-				mP = static_cast<PhongMaterial *>(m);
 				phongDiffuse(normal, impact, *mP, *l, r, g, b);
 				phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
 			}
+		#endif
 		}
 		return true;
 	}else {
-		setNoHitColor(r, g, b);
+		//setNoHitColor(r, g, b);
+		r = ray.defR;
+		g = ray.defG;
+		b = ray.defB;
 		return false;
 	}
 
@@ -3135,8 +3242,17 @@ void sglSphere(const float x,
 	s->y = y;
 	s->z = z;
 	s->radius = radius;
-	s->mat = materialStack.back();
 	sphereStack.push_back(s);
+
+	if (!materialStack.empty())
+	{
+		s->mat = materialStack.back();
+		//p->mat = materialStack.back();
+		if (s->mat->type == MaterialType::EMISSIVE)
+			emissiveSphereStack.push_back(s);
+	}else{
+		s->mat = NULL;
+	}
 }
 
 void sglMaterial(const float r,
@@ -3258,7 +3374,8 @@ void sglRayTraceScene()
 			ray.start = rOrigin;
 			ray.dir = rDir;
 			ray.length = rLen;
-
+			ray.depth = 0;
+			setNoHitColor(ray.defR, ray.defG, ray.defB);
 			traceRay(ray, r, g, b);
 
 			//drawPixel(int offsetC, int offsetD, float z, float r, float g, float b, float *colorBuffer, float *depthBuffer)
@@ -3266,6 +3383,7 @@ void sglRayTraceScene()
 			//delete ray;
 		}
 	}
+#ifdef FXAA
 	SglContext *c = contextWrapper[contextWrapper.activeContext];
 	float luma[3] = {0.299f, 0.587f, 0.114f};
 	float rgbM[3];
@@ -3351,6 +3469,7 @@ void sglRayTraceScene()
 	}
 	float *cb = c->getColorBuffer();
 	// copy temporary color buffer to real buffer
+	
 	for (int row = 1; row < winHeight - 1; ++row)
 	{
 		for (int col = 1; col < winWidth - 1; ++col)
@@ -3360,6 +3479,7 @@ void sglRayTraceScene()
 			*(cb + (int)(row * winWidth * 3 + col * 3 + 2)) = buffer[(int)(row * winWidth * 3 + col * 3 + 2)];
 		}
 	}
+#endif
 	delete[] buffer;
 }
 

@@ -227,6 +227,7 @@ struct Sphere : public Primitive
 * sglBeginScene call.
 */
 std::vector<Sphere*> sphereStack;
+std::vector<Sphere*> emissiveSphereStack;
 
 bool gluInvertMatrix(const float m[16], float invOut[16])
 {
@@ -604,4 +605,7 @@ struct Ray
 	float *start;
 	float *dir;
 	float length;
+	int depth;
+	bool toLight;
+	float defR, defG, defB;
 };
