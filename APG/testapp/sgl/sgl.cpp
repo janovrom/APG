@@ -12,15 +12,32 @@
 #define EPSILON 0.000001f
 
 #define DIR_OFFSET 0.001f
+
+#define FXAA
+#ifdef FXAA
 /// Trims the algorithm from processing dark areas.
 #define FXAA_REDUCE_MIN   1.0f/128.0f
 /// The minimum of local contrast required to apply algorithm.
 #define FXAA_REDUCE_MUL   1.0f/8.0f
 /// Trims the algorithm from processing light areas.
 #define FXAA_SPAN_MAX     8.0f
+#endif
 
 #define ADVANCED_SHADING
-#define FXAA
+
+// Defines uniform depth of field.
+#define DEPTH_OF_FIELD
+#ifdef DEPTH_OF_FIELD
+#define FOCAL_POINT_DIST	100.0f
+// This defines, how far from each other will samples be taken.
+#define BLUR_FACTOR			1
+// When sampling size set to x, we will have x*x samples.
+#define SAMPLE_SIZE_X		16
+#define BLEND_FACTOR        SAMPLE_SIZE_X * SAMPLE_SIZE_X / (BLUR_FACTOR * BLUR_FACTOR)
+#endif
+
+#define AIR_REFRA_IDX		1.000277f
+#define DEFAULT_REFR_INDEX  AIR_REFRA_IDX
 
 //#define LINE_NAIVE
 // decides which ellipse algoritm should be used
@@ -1633,7 +1650,67 @@ inline float length(float *in)
 	return sqrt(dot(in,in));
 }
 
-bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
+inline bool collideWithSphereBothSides(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
+{
+	float rayToOrigin[3];
+	rayToOrigin[0] = ray.start[0] - s.x;
+	rayToOrigin[1] = ray.start[1] - s.y;
+	rayToOrigin[2] = ray.start[2] - s.z;
+
+	float b = -dot(rayToOrigin, ray.dir);
+	float d = b * b - dot(rayToOrigin, rayToOrigin) + s.radius * s.radius;
+
+	if (d < 0)
+		return false;
+
+	float dPlus = b + sqrtf(d);
+	float dMinus = b - sqrtf(d);
+
+	// The second intersection from us is in front of us.
+	if (dPlus > 0)
+	{
+		// Test if the first intersection is in front of us.
+		if (dMinus > 0)
+		{
+			length = dMinus;
+			impact[0] = ray.start[0] + length * ray.dir[0];
+			impact[1] = ray.start[1] + length * ray.dir[1];
+			impact[2] = ray.start[2] + length * ray.dir[2];
+
+			normal[0] = impact[0] - s.x;
+			normal[1] = impact[1] - s.y;
+			normal[2] = impact[2] - s.z;
+			normalize(normal);
+
+			return true;
+		}
+		else
+		{
+			// We are in the primitive and the ray goes out.
+			length = dPlus;
+			impact[0] = ray.start[0] + length * ray.dir[0];
+			impact[1] = ray.start[1] + length * ray.dir[1];
+			impact[2] = ray.start[2] + length * ray.dir[2];
+
+			normal[0] = impact[0] - s.x;
+			normal[1] = impact[1] - s.y;
+			normal[2] = impact[2] - s.z;
+			normalize(normal);
+
+			// reverse normal since we go from inside out
+			normal[0] = -normal[0];
+			normal[1] = -normal[1];
+			normal[2] = -normal[2];
+
+			return true;
+		}
+	}
+
+	// Both intersections are behind us.
+	return false;
+}
+
+inline bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
 {
 	//printf("sgl.cpp: collideWithSphere not implemented yet. \n");
 
@@ -1759,7 +1836,7 @@ bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float 
 	return true;
 }
 
-bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, float *normal)
+inline bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, float *normal)
 {
 	float e1[3], e2[3], qvec[3], tvec[3], pvec[3];
 	inputPoint4f *v0, *v1, *v2;
@@ -1837,7 +1914,7 @@ bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, flo
 }
 
 
-float clip(float c)
+inline float clip(float c)
 {
 	if (c > 1.0f) { return 1.0f; }
 	if (c < 0.0f) { return 0.0f; }
@@ -1864,14 +1941,14 @@ void phongDiffuse(float *n, float *impact, PhongMaterial& m, PointLight& l, floa
 	*/
 }
 
-void copyVec(float *in, float *out)
+inline void copyVec(float *in, float *out)
 {
 	out[0] = in[0];
 	out[1] = in[1];
 	out[2] = in[2];
 }
 
-void reflect(float *dir, float *n, float *out)
+inline void reflect(float *dir, float *n, float *out)
 {
 	copyVec(dir, out);
 	float mult = -2*dot(out, n);
@@ -1879,6 +1956,38 @@ void reflect(float *dir, float *n, float *out)
 	out[0] += mult * n[0];
 	out[1] += mult * n[1];
 	out[2] += mult * n[2];
+}
+
+inline bool refract(float *dir, float *n, float *out, float inRefrIndex, float outRefrIndex)
+{
+	//printf("DIRECTION: [%.3f, %.3f, %.3f]\n", dir[0], dir[1], dir[2]);
+	//printf("NORMAL: [%.3f, %.3f, %.3f]\n", n[0], n[1], n[2]);
+	float refrIdx = inRefrIndex / outRefrIndex;
+	//printf("REFRACTION INDICES: IN %.3f, OUT %.3f, SNELL %.3f\n", inRefrIndex, outRefrIndex, refrIdx);
+	float cosI = -dot(n, dir);
+	float cosT2 = 1.0f - refrIdx * refrIdx * (1.0f - cosI * cosI);
+	//printf("cosI %.3f, cosT2 %.3f\n", cosI, cosT2);
+	if (cosT2 < 0.0f)
+		return false;
+
+	float tmp[3];
+	copyVec(dir, out);
+	out[0] *= refrIdx;
+	out[1] *= refrIdx;
+	out[2] *= refrIdx;
+	//printf("FIRST OUT: [%.3f, %.3f, %.3f]\n", out[0], out[1], out[2]);
+
+	copyVec(n, tmp);
+	tmp[0] *= refrIdx * cosI - sqrtf(cosT2);
+	tmp[1] *= refrIdx * cosI - sqrtf(cosT2);
+	tmp[2] *= refrIdx * cosI - sqrtf(cosT2);
+	out[0] += tmp[0];
+	out[1] += tmp[1];
+	out[2] += tmp[2];
+	//printf("TMP: [%.3f, %.3f, %.3f]\n", tmp[0], tmp[1], tmp[2]);
+	//printf("OUT: [%.3f, %.3f, %.3f]\n", out[0], out[1], out[2]);
+
+	return true;
 }
 
 void phongSpecular(float *n, float *dir, float *impact, PhongMaterial& m, PointLight& l, float& r, float& g, float& b)
@@ -1904,7 +2013,7 @@ void phongSpecular(float *n, float *dir, float *impact, PhongMaterial& m, PointL
 	
 }
 
-void setNoHitColor(float& r, float& g, float& b)
+inline void setNoHitColor(float& r, float& g, float& b)
 {
 	
 	r = colorClearR;
@@ -1928,7 +2037,7 @@ void addEmissiveColor(EmissiveMaterial& m, float& r, float& g, float& b, float l
 /**
 Method to find intersections of ray with scene. Returned color will be computed from and stored in parameters r, g and b.
 */
-bool traceRay(Ray& ray, float& r, float& g, float &b)
+bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 {
 	// too deep
 	if (ray.depth > MAX_RAY_DEPTH) { return false; }
@@ -1946,6 +2055,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 	Polygon *p;
 	Sphere *s;
 	PointLight *l;
+	Sphere *hitSphere = NULL;
 
 	float impact[3];
 	float normal[3];
@@ -1986,6 +2096,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 			m = s->mat;
 			t = s->tex;
 			hitEmmisive = (m->type == MaterialType::EMISSIVE);
+			hitSphere = *itS;
 		}
 	}
 
@@ -2041,7 +2152,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 				//clip(d);
 				//if (d == 0.0f) { continue; }
 
-				if (traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd))
+				if (traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX))
 				{
 					//phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
 				}
@@ -2054,7 +2165,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 				
 			}
 			//reflection?
-			mP->ks = 1;
+			//mP->ks = 1;
 			if (mP->ks > 0.0f)
 			{
 				tmpRAdd = tmpGAdd = tmpBAdd = 0;
@@ -2072,7 +2183,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 
 				setNoHitColor(ra.defR, ra.defG, ra.defB);
 
-				traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd);
+				traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX);
 
 				
 				tmpR += clip(tmpRAdd * mP->ks);
@@ -2081,6 +2192,58 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 				
 			}
 
+			// add refraction
+			if (mP->transmitance > 0.0f)
+			{
+				tmpRAdd = tmpGAdd = tmpBAdd = 0;
+				float refracted[3];
+				bool hasRefraction = refract(ray.dir, normal, refracted, refractIndex, mP->refractIndex);
+				if (hasRefraction)
+				{
+					normalize(refracted);
+					orig[0] = impact[0] + DIR_OFFSET * refracted[0];
+					orig[1] = impact[1] + DIR_OFFSET * refracted[1];
+					orig[2] = impact[2] + DIR_OFFSET * refracted[2];
+
+
+					ra.dir = refracted;
+					ra.start = orig;
+					ra.length = std::numeric_limits<float>::max();
+					ra.depth = ray.depth + 1;
+
+					// if we are in sphere, we want to take the other side as well
+					if (hitSphere != NULL)
+					{
+						float refrRefracted[3];
+						float refrImpact[3];
+						float refrNormal[3];
+						float refrLength;
+						// i assume both are always correct;
+						bool ret = collideWithSphereBothSides(ra, *hitSphere, refrLength, refrImpact, refrNormal);
+						ret = ret && refract(ra.dir, refrNormal, refrRefracted, mP->refractIndex, refractIndex);
+						if (ret)
+						{
+							normalize(refrRefracted);
+							ra.dir[0] = refrRefracted[0];
+							ra.dir[1] = refrRefracted[1];
+							ra.dir[2] = refrRefracted[2];
+
+							ra.start[0] = refrImpact[0];
+							ra.start[1] = refrImpact[1];
+							ra.start[2] = refrImpact[2];
+						}
+					}
+
+					setNoHitColor(ra.defR, ra.defG, ra.defB);
+
+					// well we expect only one sided refraction
+					traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX);
+
+					tmpR += clip(tmpRAdd * mP->transmitance);
+					tmpG += clip(tmpGAdd * mP->transmitance);
+					tmpB += clip(tmpBAdd * mP->transmitance);
+				}
+			}
 
 			// ADD TEMP COLOR (tmpR, tmpG, tmpB) TO R, G, B
 			r = tmpR;
@@ -3328,12 +3491,8 @@ void sglRayTraceScene()
 
 	inputPoint4f tmpP;
 	inputPoint4f nearP;
-	inputPoint4f farP;
-
-	//Ray *ray;
 
 	float r, g, b;
-
 
 	SglContext *cont = contextWrapper.contexts[contextWrapper.activeContext];
 	float *colorBuffer = cont->getColorBuffer();
@@ -3343,6 +3502,7 @@ void sglRayTraceScene()
 	{
 		for (int col = 0; col < winWidth; ++col)
 		{
+#ifndef DEPTH_OF_FIELD
 			// init near point
 			// inverse viewport
 			tmpP.x = (col - (viewportOffsetX + winWidth / 2.0f)) * 2.0f / winWidth;
@@ -3376,11 +3536,74 @@ void sglRayTraceScene()
 			ray.length = rLen;
 			ray.depth = 0;
 			setNoHitColor(ray.defR, ray.defG, ray.defB);
-			traceRay(ray, r, g, b);
+			// and here we expect, that initial material is air
+			traceRay(ray, r, g, b, DEFAULT_REFR_INDEX);
 
 			//drawPixel(int offsetC, int offsetD, float z, float r, float g, float b, float *colorBuffer, float *depthBuffer)
 			drawPixel( row * winWidth * 3 + col * 3, row * winWidth + col, 0, r, g, b, colorBuffer, depthBuffer);
 			//delete ray;
+#else
+			// find focal point
+			inputPoint4f focalPoint;
+			tmpP.x = (col - (viewportOffsetX + winWidth / 2.0f)) * 2.0f / winWidth;
+			tmpP.y = (row - (viewportOffsetY + winHeight / 2.0f)) * 2.0f / winHeight;
+			tmpP.z = FOCAL_POINT_DIST / (zFar - zNear);
+			tmpP.w = 1;
+			multiplyMatrixVector(inverse, &tmpP, focalPoint);
+			focalPoint.x = focalPoint.x / focalPoint.w;
+			focalPoint.y = focalPoint.y / focalPoint.w;
+			focalPoint.z = focalPoint.z / focalPoint.w;
+
+			r = g = b = 0;
+			// for each texel take corner texe;s, which we will project to focal point
+			for (int offsetCol = -SAMPLE_SIZE_X/2; offsetCol <= SAMPLE_SIZE_X / 2; offsetCol += BLUR_FACTOR)
+			{
+				for (int offsetRow = -SAMPLE_SIZE_X / 2; offsetRow <= SAMPLE_SIZE_X / 2; offsetRow += BLUR_FACTOR)
+				{
+					float tmpR, tmpG, tmpB;
+					// compute origin point on near plane
+					tmpP.x = (col + offsetCol - (viewportOffsetX + winWidth / 2.0f)) * 2.0f / winWidth;
+					tmpP.y = (row + offsetRow - (viewportOffsetY + winHeight / 2.0f)) * 2.0f / winHeight;
+					tmpP.z = -1;
+					tmpP.w = 1;
+					multiplyMatrixVector(inverse, &tmpP, nearP);
+					rOrigin[0] = nearP.x / nearP.w;
+					rOrigin[1] = nearP.y / nearP.w;
+					rOrigin[2] = nearP.z / nearP.w;
+					// init far point - far point is the focal point
+					rDir[0] = focalPoint.x - rOrigin[0];
+					rDir[1] = focalPoint.y - rOrigin[1];
+					rDir[2] = focalPoint.z - rOrigin[2];
+					// get ray length
+					rLen = sqrtf(rDir[0] * rDir[0] + rDir[1] * rDir[1] + rDir[2] * rDir[2]);
+					// while at it, normalize direction
+					rDir[0] /= rLen;
+					rDir[1] /= rLen;
+					rDir[2] /= rLen;
+					// here goes raytracing
+					tmpR = tmpG = tmpB = 0;
+					Ray ray;
+					ray.start = rOrigin;
+					ray.dir = rDir;
+					// set length to real zFar - zNear length
+					ray.length = zFar - zNear;
+					ray.depth = 0;
+					setNoHitColor(ray.defR, ray.defG, ray.defB);
+					// and here we expect, that initial material is air
+					traceRay(ray, tmpR, tmpG, tmpB, DEFAULT_REFR_INDEX);
+					r += tmpR;
+					g += tmpG;
+					b += tmpB;
+				}
+			}
+			
+			r /= BLEND_FACTOR;
+			g /= BLEND_FACTOR;
+			b /= BLEND_FACTOR;
+
+			//drawPixel(int offsetC, int offsetD, float z, float r, float g, float b, float *colorBuffer, float *depthBuffer)
+			drawPixel(row * winWidth * 3 + col * 3, row * winWidth + col, 0, r, g, b, colorBuffer, depthBuffer);
+#endif
 		}
 	}
 #ifdef FXAA
