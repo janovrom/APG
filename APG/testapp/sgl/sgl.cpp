@@ -21,7 +21,6 @@
 #define FXAA_REDUCE_MUL   1.0f/8.0f
 /// Trims the algorithm from processing light areas.
 #define FXAA_SPAN_MAX     8.0f
-#endif
 
 #define ADVANCED_SHADING
 // debug defines
@@ -1701,66 +1700,6 @@ inline bool collideWithSphereTest(Ray& ray, Sphere& s, float& length, float *imp
 
 inline bool collideWithSphereBothSides(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
 {
-	float rayToOrigin[3];
-	rayToOrigin[0] = ray.start[0] - s.x;
-	rayToOrigin[1] = ray.start[1] - s.y;
-	rayToOrigin[2] = ray.start[2] - s.z;
-
-	float b = -dot(rayToOrigin, ray.dir);
-	float d = b * b - dot(rayToOrigin, rayToOrigin) + s.radius * s.radius;
-
-	if (d < 0)
-		return false;
-
-	float dPlus = b + sqrtf(d);
-	float dMinus = b - sqrtf(d);
-
-	// The second intersection from us is in front of us.
-	if (dPlus > 0)
-	{
-		// Test if the first intersection is in front of us.
-		if (dMinus > 0)
-		{
-			length = dMinus;
-			impact[0] = ray.start[0] + length * ray.dir[0];
-			impact[1] = ray.start[1] + length * ray.dir[1];
-			impact[2] = ray.start[2] + length * ray.dir[2];
-
-			normal[0] = impact[0] - s.x;
-			normal[1] = impact[1] - s.y;
-			normal[2] = impact[2] - s.z;
-			normalize(normal);
-
-			return true;
-		}
-		else
-		{
-			// We are in the primitive and the ray goes out.
-			length = dPlus;
-			impact[0] = ray.start[0] + length * ray.dir[0];
-			impact[1] = ray.start[1] + length * ray.dir[1];
-			impact[2] = ray.start[2] + length * ray.dir[2];
-
-			normal[0] = impact[0] - s.x;
-			normal[1] = impact[1] - s.y;
-			normal[2] = impact[2] - s.z;
-			normalize(normal);
-
-			// reverse normal since we go from inside out
-			normal[0] = -normal[0];
-			normal[1] = -normal[1];
-			normal[2] = -normal[2];
-
-			return true;
-		}
-	}
-
-	// Both intersections are behind us.
-	return false;
-}
-
-inline bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
-{
 	//printf("sgl.cpp: collideWithSphere not implemented yet. \n");
 
 	float b, c, D;
@@ -1885,7 +1824,7 @@ inline bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact,
 	return true;
 }
 
-inline bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, float *normal)
+bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, float *normal)
 {
 	float e1[3], e2[3], qvec[3], tvec[3], pvec[3];
 	inputPoint4f *v0, *v1, *v2;
@@ -1963,7 +1902,7 @@ inline bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impa
 }
 
 
-inline float clip(float c)
+float clip(float c)
 {
 	if (c > 1.0f) { return 1.0f; }
 	if (c < 0.0f) { return 0.0f; }
@@ -1990,14 +1929,14 @@ void phongDiffuse(float *n, float *impact, PhongMaterial& m, PointLight& l, floa
 	*/
 }
 
-inline void copyVec(float *in, float *out)
+void copyVec(float *in, float *out)
 {
 	out[0] = in[0];
 	out[1] = in[1];
 	out[2] = in[2];
 }
 
-inline void reflect(float *dir, float *n, float *out)
+void reflect(float *dir, float *n, float *out)
 {
 	copyVec(dir, out);
 	float mult = -2*dot(out, n);
@@ -2005,38 +1944,6 @@ inline void reflect(float *dir, float *n, float *out)
 	out[0] += mult * n[0];
 	out[1] += mult * n[1];
 	out[2] += mult * n[2];
-}
-
-inline bool refract(float *dir, float *n, float *out, float inRefrIndex, float outRefrIndex)
-{
-	//printf("DIRECTION: [%.3f, %.3f, %.3f]\n", dir[0], dir[1], dir[2]);
-	//printf("NORMAL: [%.3f, %.3f, %.3f]\n", n[0], n[1], n[2]);
-	float refrIdx = inRefrIndex / outRefrIndex;
-	//printf("REFRACTION INDICES: IN %.3f, OUT %.3f, SNELL %.3f\n", inRefrIndex, outRefrIndex, refrIdx);
-	float cosI = -dot(n, dir);
-	float cosT2 = 1.0f - refrIdx * refrIdx * (1.0f - cosI * cosI);
-	//printf("cosI %.3f, cosT2 %.3f\n", cosI, cosT2);
-	if (cosT2 < 0.0f)
-		return false;
-
-	float tmp[3];
-	copyVec(dir, out);
-	out[0] *= refrIdx;
-	out[1] *= refrIdx;
-	out[2] *= refrIdx;
-	//printf("FIRST OUT: [%.3f, %.3f, %.3f]\n", out[0], out[1], out[2]);
-
-	copyVec(n, tmp);
-	tmp[0] *= refrIdx * cosI - sqrtf(cosT2);
-	tmp[1] *= refrIdx * cosI - sqrtf(cosT2);
-	tmp[2] *= refrIdx * cosI - sqrtf(cosT2);
-	out[0] += tmp[0];
-	out[1] += tmp[1];
-	out[2] += tmp[2];
-	//printf("TMP: [%.3f, %.3f, %.3f]\n", tmp[0], tmp[1], tmp[2]);
-	//printf("OUT: [%.3f, %.3f, %.3f]\n", out[0], out[1], out[2]);
-
-	return true;
 }
 
 void phongSpecular(float *n, float *dir, float *impact, PhongMaterial& m, PointLight& l, float& r, float& g, float& b)
@@ -2062,7 +1969,7 @@ void phongSpecular(float *n, float *dir, float *impact, PhongMaterial& m, PointL
 	
 }
 
-inline void setNoHitColor(float& r, float& g, float& b)
+void setNoHitColor(float& r, float& g, float& b)
 {
 	
 	r = colorClearR;
@@ -2086,7 +1993,7 @@ void addEmissiveColor(EmissiveMaterial& m, float& r, float& g, float& b, float l
 /**
 Method to find intersections of ray with scene. Returned color will be computed from and stored in parameters r, g and b.
 */
-bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
+bool traceRay(Ray& ray, float& r, float& g, float &b)
 {
 	// too deep
 	if (ray.depth > MAX_RAY_DEPTH) 
@@ -2112,7 +2019,6 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 	Polygon *p;
 	Sphere *s;
 	PointLight *l;
-	Sphere *hitSphere = NULL;
 
 	float impact[3];
 	float normal[3];
@@ -2153,7 +2059,6 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 			m = s->mat;
 			t = s->tex;
 			hitEmmisive = (m->type == MaterialType::EMISSIVE);
-			hitSphere = *itS;
 		}
 	}
 
@@ -2209,18 +2114,18 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				//d = clip(d);
 				//if (d == 0.0f) { continue; }
 
-				if (traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX))
+				if (traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd))
 				{
 					//phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
 				}
 				tmpR += d * tmpRAdd * mP->r * mP->kd;
 				tmpG += d * tmpGAdd * mP->g * mP->kd;
 				tmpB += d * tmpBAdd * mP->b * mP->kd;
-
-		}
+				
+			}
 #ifdef REFLECTION
 			//reflection?
-			//mP->ks = 1;
+			mP->ks = 1;
 			if (mP->ks > 0.0f)
 			{
 				tmpRAdd = tmpGAdd = tmpBAdd = 0;
@@ -2238,7 +2143,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 
 				setNoHitColor(ra.defR, ra.defG, ra.defB);
 
-				traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX);
+				traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd);
 
 				
 				tmpR += clip(tmpRAdd * mP->ks);
@@ -2301,7 +2206,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				}
 			//}
 #endif
-			
+
 			// ADD TEMP COLOR (tmpR, tmpG, tmpB) TO R, G, B
 			r = tmpR;
 			g = tmpG;
