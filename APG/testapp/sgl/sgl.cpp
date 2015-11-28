@@ -2054,7 +2054,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b)
 				
 			}
 			//reflection?
-			mP->ks = 1;
+			//mP->ks = 1;
 			if (mP->ks > 0.0f)
 			{
 				tmpRAdd = tmpGAdd = tmpBAdd = 0;
@@ -3479,8 +3479,8 @@ void sglRayTraceScene()
 			*(cb + (int)(row * winWidth * 3 + col * 3 + 2)) = buffer[(int)(row * winWidth * 3 + col * 3 + 2)];
 		}
 	}
-#endif
 	delete[] buffer;
+#endif
 }
 
 void sglRasterizeScene() {}
