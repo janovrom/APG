@@ -13,7 +13,7 @@
 
 #define DIR_OFFSET 0.001f
 
-#define FXAA
+//#define FXAA
 #ifdef FXAA
 /// Trims the algorithm from processing dark areas.
 #define FXAA_REDUCE_MIN   1.0f/128.0f
@@ -24,9 +24,12 @@
 #endif
 
 #define ADVANCED_SHADING
+// debug defines
+//#define REFLECTION
+//#define REFRACTION
 
 // Defines uniform depth of field.
-#define DEPTH_OF_FIELD
+//#define DEPTH_OF_FIELD
 #ifdef DEPTH_OF_FIELD
 #define FOCAL_POINT_DIST	100.0f
 // This defines, how far from each other will samples be taken.
@@ -43,7 +46,7 @@
 // decides which ellipse algoritm should be used
 #define ELLIPSE
 
-#define MAX_RAY_DEPTH 3
+#define MAX_RAY_DEPTH 1
 
 using namespace std;
 
@@ -1650,6 +1653,52 @@ inline float length(float *in)
 	return sqrt(dot(in,in));
 }
 
+inline bool collideWithSphereTest(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
+{
+	float rayToOrigin[3];
+	rayToOrigin[0] = ray.start[0] - s.x;
+	rayToOrigin[1] = ray.start[1] - s.y;
+	rayToOrigin[2] = ray.start[2] - s.z;
+
+	float b = -dot(rayToOrigin, ray.dir);
+	float d = b * b - dot(rayToOrigin, rayToOrigin) + s.radius * s.radius;
+
+	if (d < 0)
+		return false;
+
+	float dPlus = b + sqrtf(d);
+	float dMinus = b - sqrtf(d);
+
+	// The second intersection from us is in front of us.
+	if (dPlus > 0)
+	{
+		// Test if the first intersection is in front of us.
+		if (dMinus > 0)
+		{
+			length = dMinus;
+			impact[0] = ray.start[0] + length * ray.dir[0];
+			impact[1] = ray.start[1] + length * ray.dir[1];
+			impact[2] = ray.start[2] + length * ray.dir[2];
+
+			normal[0] = impact[0] - s.x;
+			normal[1] = impact[1] - s.y;
+			normal[2] = impact[2] - s.z;
+			normalize(normal);
+
+			return true;
+		}
+		else
+		{
+			// We are in the primitive and the ray goes out.
+			length = dPlus;
+			return false;
+		}
+	}
+
+	// Both intersections are behind us.
+	return false;
+}
+
 inline bool collideWithSphereBothSides(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
 {
 	float rayToOrigin[3];
@@ -2040,7 +2089,15 @@ Method to find intersections of ray with scene. Returned color will be computed 
 bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 {
 	// too deep
-	if (ray.depth > MAX_RAY_DEPTH) { return false; }
+	if (ray.depth > MAX_RAY_DEPTH) 
+	{ 
+		// since it is maximum ray depth, it should return some value, if it returns 0,
+		// than it will multiply the old values a force it to 0
+		r = ray.defR;
+		g = ray.defG;
+		b = ray.defB; 
+		return false; 
+	}
 
 	std::deque<Polygon *>::iterator itD;
 	std::vector<Polygon *>::iterator itE; 
@@ -2149,7 +2206,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 
 				d = dot(normal, ra.dir);
 				//d = 1;
-				//clip(d);
+				d = clip(d);
 				//if (d == 0.0f) { continue; }
 
 				if (traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX))
@@ -2157,13 +2214,14 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 					//phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
 				}
 
-				tmpR += d * tmpRAdd * mP->kd * mP->r;
-				tmpG += d * tmpGAdd * mP->kd * mP->g;
-				tmpB += d * tmpBAdd * mP->kd * mP->b;
+				tmpR += tmpRAdd* mP->r;
+				tmpG += tmpGAdd* mP->g;
+				tmpB += tmpBAdd * mP->b;
 
 
 				
 			}
+#ifdef REFLECTION
 			//reflection?
 			//mP->ks = 1;
 			if (mP->ks > 0.0f)
@@ -2191,10 +2249,11 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				tmpB += clip(tmpBAdd * mP->ks);
 				
 			}
-
+#endif
+#ifdef REFRACTION
 			// add refraction
-			if (mP->transmitance > 0.0f)
-			{
+			//if (mP->transmitance > 0.0f)
+			//{
 				tmpRAdd = tmpGAdd = tmpBAdd = 0;
 				float refracted[3];
 				bool hasRefraction = refract(ray.dir, normal, refracted, refractIndex, mP->refractIndex);
@@ -2243,8 +2302,8 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 					tmpG += clip(tmpGAdd * mP->transmitance);
 					tmpB += clip(tmpBAdd * mP->transmitance);
 				}
-			}
-
+			//}
+#endif
 			// ADD TEMP COLOR (tmpR, tmpG, tmpB) TO R, G, B
 			r = tmpR;
 			g = tmpG;
@@ -3490,7 +3549,7 @@ void sglRayTraceScene()
 	float winWidth = (float) contextWrapper[contextWrapper.activeContext]->getWidth();
 
 	inputPoint4f tmpP;
-	inputPoint4f nearP;
+	inputPoint4f nearP, farP;
 
 	float r, g, b;
 
@@ -3702,8 +3761,8 @@ void sglRayTraceScene()
 			*(cb + (int)(row * winWidth * 3 + col * 3 + 2)) = buffer[(int)(row * winWidth * 3 + col * 3 + 2)];
 		}
 	}
-#endif
 	delete[] buffer;
+#endif
 }
 
 void sglRasterizeScene() {}
