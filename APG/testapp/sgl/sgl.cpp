@@ -21,6 +21,7 @@
 #define FXAA_REDUCE_MUL   1.0f/8.0f
 /// Trims the algorithm from processing light areas.
 #define FXAA_SPAN_MAX     8.0f
+#endif
 
 #define ADVANCED_SHADING
 // debug defines
@@ -1698,7 +1699,7 @@ inline bool collideWithSphereTest(Ray& ray, Sphere& s, float& length, float *imp
 	return false;
 }
 
-inline bool collideWithSphereBothSides(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
+inline bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
 {
 	//printf("sgl.cpp: collideWithSphere not implemented yet. \n");
 
