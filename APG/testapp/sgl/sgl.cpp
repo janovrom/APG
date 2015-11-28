@@ -25,8 +25,8 @@
 
 #define ADVANCED_SHADING
 // debug defines
-//#define REFLECTION
-//#define REFRACTION
+#define REFLECTION
+#define REFRACTION
 
 // Defines uniform depth of field.
 //#define DEPTH_OF_FIELD
@@ -46,7 +46,7 @@
 // decides which ellipse algoritm should be used
 #define ELLIPSE
 
-#define MAX_RAY_DEPTH 1
+#define MAX_RAY_DEPTH 8
 
 using namespace std;
 
@@ -2093,9 +2093,9 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 	{ 
 		// since it is maximum ray depth, it should return some value, if it returns 0,
 		// than it will multiply the old values a force it to 0
-		r = ray.defR;
-		g = ray.defG;
-		b = ray.defB; 
+		//r = ray.defR;
+		//g = ray.defG;
+		//b = ray.defB; 
 		return false; 
 	}
 
@@ -2198,7 +2198,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				ra.dir = dire;
 				ra.start = orig;
 				ra.length = len;
-				ra.depth = ray.depth + 1;
+				ra.depth = ray.length + 1;
 				ra.defR = l->r;
 				ra.defG = l->g;
 				ra.defB = l->b;
@@ -2206,21 +2206,18 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 
 				d = dot(normal, ra.dir);
 				//d = 1;
-				d = clip(d);
+				//d = clip(d);
 				//if (d == 0.0f) { continue; }
 
 				if (traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX))
 				{
 					//phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
 				}
+				tmpR += d * tmpRAdd * mP->r * mP->kd;
+				tmpG += d * tmpGAdd * mP->g * mP->kd;
+				tmpB += d * tmpBAdd * mP->b * mP->kd;
 
-				tmpR += tmpRAdd* mP->r;
-				tmpG += tmpGAdd* mP->g;
-				tmpB += tmpBAdd * mP->b;
-
-
-				
-			}
+		}
 #ifdef REFLECTION
 			//reflection?
 			//mP->ks = 1;
@@ -2304,6 +2301,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				}
 			//}
 #endif
+			
 			// ADD TEMP COLOR (tmpR, tmpG, tmpB) TO R, G, B
 			r = tmpR;
 			g = tmpG;
