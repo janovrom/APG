@@ -13,7 +13,7 @@
 
 #define DIR_OFFSET 0.001f
 
-//#define FXAA
+#define FXAA
 #ifdef FXAA
 /// Trims the algorithm from processing dark areas.
 #define FXAA_REDUCE_MIN   1.0f/128.0f
@@ -46,7 +46,7 @@
 // decides which ellipse algoritm should be used
 #define ELLIPSE
 
-#define MAX_RAY_DEPTH 8
+#define MAX_RAY_DEPTH 3
 
 using namespace std;
 
@@ -1653,6 +1653,63 @@ inline float length(float *in)
 	return sqrt(dot(in,in));
 }
 
+inline bool collideWithSphereBothSides(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
+{
+	float rayToOrigin[3];
+	rayToOrigin[0] = ray.start[0] - s.x;
+	rayToOrigin[1] = ray.start[1] - s.y;
+	rayToOrigin[2] = ray.start[2] - s.z;
+
+	float b = -dot(rayToOrigin, ray.dir);
+	float d = b * b - dot(rayToOrigin, rayToOrigin) + s.radius * s.radius;
+
+	if (d < 0)
+		return false;
+
+	float dPlus = b + sqrtf(d);
+	float dMinus = b - sqrtf(d);
+
+	// The second intersection from us is in front of us.
+	if (dPlus > 0)
+	{
+		// Test if the first intersection is in front of us.
+		if (dMinus > 0)
+		{
+			length = dMinus;
+			impact[0] = ray.start[0] + length * ray.dir[0];
+			impact[1] = ray.start[1] + length * ray.dir[1];
+			impact[2] = ray.start[2] + length * ray.dir[2];
+
+			normal[0] = impact[0] - s.x;
+			normal[1] = impact[1] - s.y;
+			normal[2] = impact[2] - s.z;
+			normalize(normal);
+
+			return true;
+		}
+		else
+		{
+			// We are in the primitive and the ray goes out.
+			length = dPlus;
+			impact[0] = ray.start[0] + length * ray.dir[0];
+			impact[1] = ray.start[1] + length * ray.dir[1];
+			impact[2] = ray.start[2] + length * ray.dir[2];
+
+			normal[0] = impact[0] - s.x;
+			normal[1] = impact[1] - s.y;
+			normal[2] = impact[2] - s.z;
+			normalize(normal);
+			normal[0] = -normal[0];
+			normal[1] = -normal[1];
+			normal[2] = -normal[2];
+			return true;
+		}
+	}
+
+	// Both intersections are behind us.
+	return false;
+}
+
 inline bool collideWithSphereTest(Ray& ray, Sphere& s, float& length, float *impact, float *normal)
 {
 	float rayToOrigin[3];
@@ -2033,9 +2090,9 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 	{ 
 		// since it is maximum ray depth, it should return some value, if it returns 0,
 		// than it will multiply the old values a force it to 0
-		//r = ray.defR;
-		//g = ray.defG;
-		//b = ray.defB; 
+		r = ray.defR;
+		g = ray.defG;
+		b = ray.defB; 
 		return false; 
 	}
 
@@ -2138,7 +2195,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				ra.dir = dire;
 				ra.start = orig;
 				ra.length = len;
-				ra.depth = ray.depth + 1;
+				ra.depth = ra.depth + 1;
 				ra.defR = l->r;
 				ra.defG = l->g;
 				ra.defB = l->b;
@@ -2146,18 +2203,20 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 
 				d = dot(normal, ra.dir);
 				//d = 1;
-				//d = clip(d);
+				d = clip(d);
 				//if (d == 0.0f) { continue; }
 
-				if (traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX))
+				if (!traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX))
 				{
 					//phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
+					tmpR += d * tmpRAdd * mP->kd * mP->r;
+					tmpG += d * tmpGAdd * mP->kd * mP->g;
+					tmpB += d * tmpBAdd * mP->kd * mP->b;
 				}
 
-				tmpR += d * tmpRAdd * mP->kd * mP->r;
-				tmpG += d * tmpGAdd * mP->kd * mP->g;
-				tmpB += d * tmpBAdd * mP->kd * mP->b;
-
+				//tmpR += d * tmpRAdd * mP->kd * mP->r;
+				//tmpG += d * tmpGAdd * mP->kd * mP->g;
+				//tmpB += d * tmpBAdd * mP->kd * mP->b;
 
 				
 			}

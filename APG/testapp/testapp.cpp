@@ -10,8 +10,8 @@
 //#define TEST0
 //#define TEST1
 //#define TEST2
-#define TEST3
-//#define TEST4
+//#define TEST3
+#define TEST4
 //#define TEST5
 
 #ifdef TEST0
@@ -35,12 +35,12 @@
 #ifdef TEST3
 //#define TEST_3A
 //#define TEST_3B
-#define TEST_3C
+//#define TEST_3C
 #endif
 
 #ifdef TEST4
-#define TEST_4A
-#define TEST_4B
+//#define TEST_4A
+//#define TEST_4B
 #define TEST_4C
 #endif
 
