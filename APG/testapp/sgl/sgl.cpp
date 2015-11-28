@@ -2195,7 +2195,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				ra.dir = dire;
 				ra.start = orig;
 				ra.length = len;
-				ra.depth = ra.depth + 1;
+				ra.depth = ray.depth + 1;
 				ra.defR = l->r;
 				ra.defG = l->g;
 				ra.defB = l->b;
