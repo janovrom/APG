@@ -46,7 +46,7 @@
 // decides which ellipse algoritm should be used
 #define ELLIPSE
 
-#define MAX_RAY_DEPTH 1
+#define MAX_RAY_DEPTH 8
 
 using namespace std;
 
@@ -1884,6 +1884,8 @@ inline bool collideWithSphere(Ray& ray, Sphere& s, float& length, float *impact,
 
 inline bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impact, float *normal)
 {
+
+
 	float e1[3], e2[3], qvec[3], tvec[3], pvec[3];
 	inputPoint4f *v0, *v1, *v2;
 
@@ -1904,6 +1906,12 @@ inline bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impa
 	e2[1] = v2->y - v0->y;
 	e2[2] = v2->z - v0->z;
 
+	//normal check
+	float norm[3];
+	cross(norm, e1, e2);
+	if (dot(norm, ray.dir) > 0) { return false; }
+
+
 	cross(pvec, ray.dir, e2);
 
 	float det = dot(e1, pvec);
@@ -1918,8 +1926,9 @@ inline bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impa
 	tvec[2] = ray.start[2] - v0->z;
 
 	float u = dot(tvec, pvec);
-
-	if (u < 0.0f || u > det)
+	det = 1 / det;
+	u *= det;
+	if (u < 0.0f || u > 1.0f)
 	{
 		return false;
 	}
@@ -1927,17 +1936,15 @@ inline bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impa
 	cross(qvec, tvec, e1);
 
 	float v = dot(ray.dir, qvec);
-	if (v < 0.0f || u + v > det)
+	v *= det;
+
+	if (v < 0.0f || u + v > 1.0f)
 	{
 		return false;
 	}
 
 
 	float t = dot(e2, qvec);
-
-	det = 1 / det;
-	u *= det;
-	v *= det;
 	t *= det;
 
 
@@ -1945,6 +1952,9 @@ inline bool collideWithTriangle(Ray& ray, Polygon& p, float& length, float *impa
 	{
 		return false;
 	}
+	
+	
+
 
 	cross(normal, e1, e2);
 	normalize(normal);
@@ -2087,7 +2097,7 @@ inline bool reachLight(Ray &ray)
 
 	float impact[3];
 	float normal[3];
-	float len = ray.length;
+	float len = ray.length - 2*DIR_OFFSET;// std::numeric_limits<float>::max();
 
 	Polygon *p;
 	Sphere *s;
@@ -2247,25 +2257,29 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				d = clip(d);
 				//if (d == 0.0f) { continue; }
 				// !traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX)
-				if (reachLight(ra))
+				if (/*true ||*/ reachLight(ra))
 				{
-					//phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
-					tmpR += d * mP->kd * mP->r;
-					tmpG += d * mP->kd * mP->g;
-					tmpB += d * mP->kd * mP->b;
+					//printf("hikasdhjaskhfkasjnfa\n");
+					phongSpecular(normal, ray.dir, impact, *mP, *l, tmpR, tmpG, tmpB);
+					//tmpR = mP->r;
+					//tmpG = mP->g;
+					//tmpB = mP->b;
+					tmpR += d * mP->kd * mP->r * l->r;
+					tmpG += d * mP->kd * mP->g * l->g;
+					tmpB += d * mP->kd * mP->b * l->b;
+				}else {
 				}
 				//tmpR += d * tmpRAdd * mP->kd * mP->r;
 				//tmpG += d * tmpGAdd * mP->kd * mP->g;
 				//tmpB += d * tmpBAdd * mP->kd * mP->b;
-
 
 				
 			}
 #ifdef REFLECTION
 			//reflection?
 			//mP->ks = 1;
-			if (mP->ks > 0.0f)
-			{
+			//if (mP->ks > 0.0f)
+			//{
 				tmpRAdd = tmpGAdd = tmpBAdd = 0;
 				//reflection
 				dire[0] = dire[1] = dire[2] = 0.0f;
@@ -2288,7 +2302,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				tmpG += clip(tmpGAdd * mP->ks);
 				tmpB += clip(tmpBAdd * mP->ks);
 				
-			}
+			//}
 #endif
 #ifdef REFRACTION
 			// add refraction
