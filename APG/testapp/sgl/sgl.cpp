@@ -2080,6 +2080,44 @@ void addEmissiveColor(EmissiveMaterial& m, float& r, float& g, float& b, float l
 
 }
 
+inline bool reachLight(Ray &ray)
+{
+	std::deque<Polygon *>::iterator itD;
+	std::vector<Sphere*>::iterator itS;
+
+	float impact[3];
+	float normal[3];
+	float len = ray.length;
+
+	Polygon *p;
+	Sphere *s;
+
+	itD = polygonQueue.begin();
+	for (; itD != polygonQueue.end(); itD++)
+	{
+		p = *itD;
+
+		if (collideWithTriangle(ray, *p, len, impact, normal))
+		{
+			return false;
+		}
+
+	}
+
+	itS = sphereStack.begin();
+	for (; itS != sphereStack.end(); itS++)
+	{
+		s = *itS;
+
+		if (collideWithSphere(ray, *s, len, impact, normal))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 /**
 Method to find intersections of ray with scene. Returned color will be computed from and stored in parameters r, g and b.
 */
@@ -2177,6 +2215,9 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 			float d, len;
 
 			mP = static_cast<PhongMaterial *>(m);
+			//tmpR = mP->r;
+			//tmpG = mP->g;
+			//tmpB = mP->b;
 			for (; itL != lightStack.end(); itL++)
 			{
 				tmpRAdd = tmpGAdd = tmpBAdd = 0;
@@ -2205,13 +2246,17 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				//d = 1;
 				d = clip(d);
 				//if (d == 0.0f) { continue; }
-
-				if (!traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX))
+				// !traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX)
+				if (reachLight(ra))
 				{
-					tmpR += 2 * clip(d * tmpRAdd * mP->kd * mP->r);
-					tmpG += 2 * clip(d * tmpGAdd * mP->kd * mP->g);
-					tmpB += 2 * clip(d * tmpBAdd * mP->kd * mP->b);
+					//phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
+					tmpR += d * mP->kd * mP->r;
+					tmpG += d * mP->kd * mP->g;
+					tmpB += d * mP->kd * mP->b;
 				}
+				//tmpR += d * tmpRAdd * mP->kd * mP->r;
+				//tmpG += d * tmpGAdd * mP->kd * mP->g;
+				//tmpB += d * tmpBAdd * mP->kd * mP->b;
 
 
 				
@@ -2299,7 +2344,50 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				}
 			//}
 #endif
+			//r = g = b = 0;
+			//for (; itL != lightStack.end(); itL++)
+			//{
+			//	l = *itL;
+			//	dire[0] = l->x - impact[0];
+			//	dire[1] = l->y - impact[1];
+			//	dire[2] = l->z - impact[2];
+			//	len = length(dire);
+			//	normalize(dire);
 
+			//	orig[0] = impact[0] + DIR_OFFSET * dire[0];
+			//	orig[1] = impact[1] + DIR_OFFSET * dire[1];
+			//	orig[2] = impact[2] + DIR_OFFSET * dire[2];
+
+
+			//	ra.dir = dire;
+			//	ra.start = orig;
+			//	ra.length = len;
+			//	ra.depth = ray.depth + 1;
+			//	ra.defR = l->r;
+			//	ra.defG = l->g;
+			//	ra.defB = l->b;
+
+
+			//	d = dot(normal, ra.dir);
+			//	//d = 1;
+			//	d = clip(d);
+			//	//if (d == 0.0f) { continue; }
+			//	// !traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX)
+			//	if (reachLight(ra))
+			//	{
+			//		//phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
+			//		r += tmpR * d * mP->kd * mP->r * l->r;
+			//		g += tmpG * d * mP->kd * mP->g * l->g;
+			//		b += tmpB * d * mP->kd * mP->b * l->b;
+			//	}
+			//	//tmpR += d * tmpRAdd * mP->kd * mP->r;
+			//	//tmpG += d * tmpGAdd * mP->kd * mP->g;
+			//	//tmpB += d * tmpBAdd * mP->kd * mP->b;
+
+			//	//tmpR += d * mP->kd * mP->r;
+			//	//tmpG += d * mP->kd * mP->g;
+			//	//tmpB += d * mP->kd * mP->b;
+			//}
 			// ADD TEMP COLOR (tmpR, tmpG, tmpB) TO R, G, B
 			r = tmpR;
 			g = tmpG;
