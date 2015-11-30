@@ -46,7 +46,7 @@
 // decides which ellipse algoritm should be used
 #define ELLIPSE
 
-#define MAX_RAY_DEPTH 3
+#define MAX_RAY_DEPTH 1
 
 using namespace std;
 
@@ -1747,7 +1747,7 @@ inline bool collideWithSphereTest(Ray& ray, Sphere& s, float& length, float *imp
 		else
 		{
 			// We are in the primitive and the ray goes out.
-			length = dPlus;
+			//length = dPlus;
 			return false;
 		}
 	}
@@ -2208,15 +2208,11 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 
 				if (!traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX))
 				{
-					//phongSpecular(normal, ray.dir, impact, *mP, *l, r, g, b);
-					//tmpR += d * tmpRAdd * mP->kd * mP->r;
-					//tmpG += d * tmpGAdd * mP->kd * mP->g;
-					//tmpB += d * tmpBAdd * mP->kd * mP->b;
+					tmpR += 2 * clip(d * tmpRAdd * mP->kd * mP->r);
+					tmpG += 2 * clip(d * tmpGAdd * mP->kd * mP->g);
+					tmpB += 2 * clip(d * tmpBAdd * mP->kd * mP->b);
 				}
 
-				tmpR += d * tmpRAdd * mP->kd * mP->r;
-				tmpG += d * tmpGAdd * mP->kd * mP->g;
-				tmpB += d * tmpBAdd * mP->kd * mP->b;
 
 				
 			}
