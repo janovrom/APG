@@ -40,8 +40,8 @@
 
 #ifdef TEST4
 //#define TEST_4A
-//#define TEST_4B
-#define TEST_4C
+#define TEST_4B
+//#define TEST_4C
 #endif
 
 #ifdef TEST5
@@ -1026,7 +1026,7 @@ RayTraceScene(const char *scenename)
 				m.shine,
 				m.T,
 				m.ior);
-	printf("%f %f %f %f %f %f %f %f \n", m.col.r,m.col.g,m.col.b,m.kd,m.ks,	m.shine,m.T,m.ior);
+	//printf("%f %f %f %f %f %f %f %f \n", m.col.r,m.col.g,m.col.b,m.kd,m.ks,	m.shine,m.T,m.ior);
 	
 	/// store all polygons (converted into triangles)
 	const NFFStore::TriangleList &tlist = giter->geometry;
