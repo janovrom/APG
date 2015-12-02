@@ -2298,9 +2298,9 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX);
 
 				
-				tmpR += clip((1.0f - mP->transmitance) * tmpRAdd * mP->ks);
-				tmpG += clip((1.0f - mP->transmitance) * tmpGAdd * mP->ks);
-				tmpB += clip((1.0f - mP->transmitance) * tmpBAdd * mP->ks);
+				tmpR += clip(tmpRAdd * mP->ks);
+				tmpG += clip(tmpGAdd * mP->ks);
+				tmpB += clip(tmpBAdd * mP->ks);
 				
 			//}
 #endif
