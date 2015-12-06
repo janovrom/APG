@@ -13,7 +13,7 @@
 
 #define DIR_OFFSET 0.001f
 
-#define FXAA
+//#define FXAA
 #ifdef FXAA
 /// Trims the algorithm from processing dark areas.
 #define FXAA_REDUCE_MIN   1.0f/128.0f
@@ -29,14 +29,14 @@
 #define REFRACTION
 
 // Defines uniform depth of field.
-#define DEPTH_OF_FIELD
+//#define DEPTH_OF_FIELD
 #ifdef DEPTH_OF_FIELD
 #define FOCAL_POINT_DIST	200.0f
 // This defines, how far from each other will samples be taken.
-#define BLUR_FACTOR			2
+#define BLUR_FACTOR			1
 // When sampling size set to x, we will have x*x samples.
 #define SAMPLE_SIZE_X		4
-#define BLEND_FACTOR        SAMPLE_SIZE_X * SAMPLE_SIZE_X / (BLUR_FACTOR * BLUR_FACTOR)
+#define BLEND_FACTOR        (SAMPLE_SIZE_X + 1) * (SAMPLE_SIZE_X + 1)
 #endif
 
 #define AIR_REFRA_IDX		1.000277f
@@ -3713,6 +3713,9 @@ void sglRayTraceScene()
 
 			r = g = b = 0;
 			// for each texel take corner texe;s, which we will project to focal point
+
+			float reduction = 1.0f / (SAMPLE_SIZE_X*SAMPLE_SIZE_X);
+
 			for (int offsetCol = -SAMPLE_SIZE_X/2; offsetCol <= SAMPLE_SIZE_X / 2; offsetCol += BLUR_FACTOR)
 			{
 				for (int offsetRow = -SAMPLE_SIZE_X / 2; offsetRow <= SAMPLE_SIZE_X / 2; offsetRow += BLUR_FACTOR)
