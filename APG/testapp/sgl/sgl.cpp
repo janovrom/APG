@@ -29,13 +29,13 @@
 #define REFRACTION
 
 // Defines uniform depth of field.
-//#define DEPTH_OF_FIELD
+#define DEPTH_OF_FIELD
 #ifdef DEPTH_OF_FIELD
-#define FOCAL_POINT_DIST	100.0f
+#define FOCAL_POINT_DIST	200.0f
 // This defines, how far from each other will samples be taken.
-#define BLUR_FACTOR			1
+#define BLUR_FACTOR			2
 // When sampling size set to x, we will have x*x samples.
-#define SAMPLE_SIZE_X		16
+#define SAMPLE_SIZE_X		4
 #define BLEND_FACTOR        SAMPLE_SIZE_X * SAMPLE_SIZE_X / (BLUR_FACTOR * BLUR_FACTOR)
 #endif
 
