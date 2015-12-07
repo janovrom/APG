@@ -29,13 +29,13 @@
 #define REFRACTION
 
 // Defines uniform depth of field.
-//#define DEPTH_OF_FIELD
+#define DEPTH_OF_FIELD
 #ifdef DEPTH_OF_FIELD
-#define FOCAL_POINT_DIST	200.0f
+#define FOCAL_POINT_DIST	130.0f
 // This defines, how far from each other will samples be taken.
 #define BLUR_FACTOR			1
 // When sampling size set to x, we will have x*x samples.
-#define SAMPLE_SIZE_X		4
+#define SAMPLE_SIZE_X		2
 #define BLEND_FACTOR        (SAMPLE_SIZE_X + 1) * (SAMPLE_SIZE_X + 1)
 #endif
 
@@ -46,7 +46,7 @@
 // decides which ellipse algoritm should be used
 #define ELLIPSE
 
-#define MAX_RAY_DEPTH 8
+#define MAX_RAY_DEPTH 3
 
 using namespace std;
 
@@ -2267,7 +2267,6 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 					tmpR += d * mP->kd * mP->r * l->r;
 					tmpG += d * mP->kd * mP->g * l->g;
 					tmpB += d * mP->kd * mP->b * l->b;
-				}else {
 				}
 				//tmpR += d * tmpRAdd * mP->kd * mP->r;
 				//tmpG += d * tmpGAdd * mP->kd * mP->g;
@@ -2298,9 +2297,9 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX);
 
 				
-				tmpR += clip(tmpRAdd * mP->ks);
-				tmpG += clip(tmpGAdd * mP->ks);
-				tmpB += clip(tmpBAdd * mP->ks);
+				tmpR += clip(tmpRAdd * mP->ks );
+				tmpG += clip(tmpGAdd * mP->ks );
+				tmpB += clip(tmpBAdd * mP->ks );
 				
 			//}
 #endif
@@ -2344,6 +2343,42 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 							ra.start[0] = refrImpact[0];
 							ra.start[1] = refrImpact[1];
 							ra.start[2] = refrImpact[2];
+							/*
+							Ray rayS = Ray();
+
+							for (; itL != lightStack.end(); itL++)
+							{
+								tmpRAdd = tmpGAdd = tmpBAdd = 0;
+								l = *itL;
+								rayS.dir[0] = l->x - refrImpact[0];
+								rayS.dir[1] = l->y - refrImpact[1];
+								rayS.dir[2] = l->z - refrImpact[2];
+								rayS.length = length(rayS.dir);
+								normalize(rayS.dir);
+
+								rayS.start[0] = refrImpact[0] + DIR_OFFSET * rayS.dir[0];
+								rayS.start[1] = refrImpact[1] + DIR_OFFSET * rayS.dir[1];
+								rayS.start[2] = refrImpact[2] + DIR_OFFSET * rayS.dir[2];
+
+
+								rayS.depth = ray.depth + 1;
+								rayS.defR = l->r;
+								rayS.defG = l->g;
+								rayS.defB = l->b;
+
+
+								d = dot(refrNormal, rayS.dir);
+								d = clip(d);
+								if (reachLight(rayS))
+								{
+									//phongSpecular(refrNormal, rayS.dir, rayS.start, *mP, *l, tmpR, tmpG, tmpB);
+									tmpR += mP->transmitance * d * mP->kd * mP->r * l->r;
+									tmpG +=	mP->transmitance * d * mP->kd * mP->g * l->g;
+									tmpB += mP->transmitance * d * mP->kd * mP->b * l->b;
+								}
+
+
+							}*/
 						}
 					}
 
@@ -2352,9 +2387,9 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 					// well we expect only one sided refraction
 					traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX);
 
-					tmpR += clip(tmpRAdd * mP->transmitance);
-					tmpG += clip(tmpGAdd * mP->transmitance);
-					tmpB += clip(tmpBAdd * mP->transmitance);
+					tmpR += clip(tmpRAdd * mP->transmitance * mP->transmitance);
+					tmpG += clip(tmpGAdd * mP->transmitance * mP->transmitance);
+					tmpB += clip(tmpBAdd * mP->transmitance * mP->transmitance);
 				}
 			//}
 #endif
@@ -3704,26 +3739,24 @@ void sglRayTraceScene()
 			inputPoint4f focalPoint;
 			tmpP.x = (col - (viewportOffsetX + winWidth / 2.0f)) * 2.0f / winWidth;
 			tmpP.y = (row - (viewportOffsetY + winHeight / 2.0f)) * 2.0f / winHeight;
-			tmpP.z = FOCAL_POINT_DIST / (zFar - zNear);
+			tmpP.z = FOCAL_POINT_DIST;//(FOCAL_POINT_DIST / (zFar - zNear) - 0.5f) * 2.0f;
 			tmpP.w = 1;
 			multiplyMatrixVector(inverse, &tmpP, focalPoint);
 			focalPoint.x = focalPoint.x / focalPoint.w;
 			focalPoint.y = focalPoint.y / focalPoint.w;
-			focalPoint.z = focalPoint.z / focalPoint.w;
+			focalPoint.z = FOCAL_POINT_DIST;
 
 			r = g = b = 0;
 			// for each texel take corner texe;s, which we will project to focal point
 
-			float reduction = 1.0f / (SAMPLE_SIZE_X*SAMPLE_SIZE_X);
-
-			for (int offsetCol = -SAMPLE_SIZE_X/2; offsetCol <= SAMPLE_SIZE_X / 2; offsetCol += BLUR_FACTOR)
+			for (int offsetCol = -SAMPLE_SIZE_X/2; offsetCol <= SAMPLE_SIZE_X / 2; offsetCol += 1)
 			{
-				for (int offsetRow = -SAMPLE_SIZE_X / 2; offsetRow <= SAMPLE_SIZE_X / 2; offsetRow += BLUR_FACTOR)
+				for (int offsetRow = -SAMPLE_SIZE_X / 2; offsetRow <= SAMPLE_SIZE_X / 2; offsetRow += 1)
 				{
 					float tmpR, tmpG, tmpB;
 					// compute origin point on near plane
-					tmpP.x = (col + offsetCol - (viewportOffsetX + winWidth / 2.0f)) * 2.0f / winWidth;
-					tmpP.y = (row + offsetRow - (viewportOffsetY + winHeight / 2.0f)) * 2.0f / winHeight;
+					tmpP.x = (col + offsetCol * (BLUR_FACTOR) - (viewportOffsetX + winWidth / 2.0f)) * 2.0f / winWidth;
+					tmpP.y = (row + offsetRow * (BLUR_FACTOR) - (viewportOffsetY + winHeight / 2.0f)) * 2.0f / winHeight;
 					tmpP.z = -1;
 					tmpP.w = 1;
 					multiplyMatrixVector(inverse, &tmpP, nearP);
