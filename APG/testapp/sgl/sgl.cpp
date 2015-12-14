@@ -33,10 +33,10 @@
 #ifdef DEPTH_OF_FIELD
 #define FOCAL_POINT_DIST	200.0f
 // This defines, how far from each other will samples be taken.
-#define BLUR_FACTOR			2
+#define BLUR_FACTOR			1
 // When sampling size set to x, we will have x*x samples.
 #define SAMPLE_SIZE_X		4
-#define BLEND_FACTOR        SAMPLE_SIZE_X * SAMPLE_SIZE_X / (BLUR_FACTOR * BLUR_FACTOR)
+#define BLEND_FACTOR        (SAMPLE_SIZE_X + 1) * (SAMPLE_SIZE_X + 1)
 #endif
 
 #define AIR_REFRA_IDX		1.000277f
