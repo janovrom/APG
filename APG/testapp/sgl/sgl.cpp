@@ -29,7 +29,7 @@
 #define REFRACTION
 
 // Defines uniform depth of field.
-#define DEPTH_OF_FIELD
+//#define DEPTH_OF_FIELD
 #ifdef DEPTH_OF_FIELD
 #define FOCAL_POINT_DIST	130.0f
 // This defines, how far from each other will samples be taken.
@@ -2069,12 +2069,19 @@ void phongSpecular(float *n, float *dir, float *impact, PhongMaterial& m, PointL
 	
 }
 
-inline void setNoHitColor(float& r, float& g, float& b)
+inline void setNoHitColor(float *dir, float& r, float& g, float& b)
 {
-	
-	r = colorClearR;
-	g = colorClearG;
-	b = colorClearB;
+	SglContext *c = contextWrapper.contexts[contextWrapper.activeContext];
+	if (c->GetEnvironmentMap() == NULL)
+	{
+		//printf("null\n");
+		r = colorClearR;
+		g = colorClearG;
+		b = colorClearB;
+	}else {
+		//printf("mapping\n");
+		c->GetEnvironmentMap()->getEnvironmentColor(dir, r, g, b);
+	}
 	
 	
 	//printf("sgl.cpp : setNoHitColor() is just temporal method. \n");
@@ -2292,7 +2299,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				ra.length = std::numeric_limits<float>::max();
 				ra.depth = ray.depth + 1;
 
-				setNoHitColor(ra.defR, ra.defG, ra.defB);
+				setNoHitColor(ra.dir, ra.defR, ra.defG, ra.defB);
 
 				traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX);
 
@@ -2382,7 +2389,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 						}
 					}
 
-					setNoHitColor(ra.defR, ra.defG, ra.defB);
+					setNoHitColor(ra.dir, ra.defR, ra.defG, ra.defB);
 
 					// well we expect only one sided refraction
 					traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX);
@@ -3727,7 +3734,7 @@ void sglRayTraceScene()
 			ray.dir = rDir;
 			ray.length = rLen;
 			ray.depth = 0;
-			setNoHitColor(ray.defR, ray.defG, ray.defB);
+			setNoHitColor(ray.dir, ray.defR, ray.defG, ray.defB);
 			// and here we expect, that initial material is air
 			traceRay(ray, r, g, b, DEFAULT_REFR_INDEX);
 
@@ -3781,7 +3788,7 @@ void sglRayTraceScene()
 					// set length to real zFar - zNear length
 					ray.length = zFar - zNear;
 					ray.depth = 0;
-					setNoHitColor(ray.defR, ray.defG, ray.defB);
+					setNoHitColor(ray.dir, ray.defR, ray.defG, ray.defB);
 					// and here we expect, that initial material is air
 					traceRay(ray, tmpR, tmpG, tmpB, DEFAULT_REFR_INDEX);
 					r += tmpR;

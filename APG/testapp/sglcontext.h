@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cmath>
 #define MIN_CONTEXTS 32
+#define PI 3.141592f
 
 
 std::stack<float *> modelViewStack;
@@ -29,7 +30,7 @@ struct Texture
 private:
 	float *texels;
 
-	float WrapAndResizeValues(float *u, float *v)
+	void WrapAndResizeValues(float *u, float *v)
 	{
 		*u *= width - 1;
 		*v *= height - 1;
@@ -111,6 +112,36 @@ public:
 				*b = texels[thisRow + thisCol + 2];
 			} break;
 		}
+	}
+
+
+	void getEnvironmentColor(float* dir, float& R, float& G, float& B)
+	{
+		float d;
+		float r;
+		float s, t;
+
+		d = std::sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
+		if (d > 0)
+		{
+			r = std::acos(dir[2]) / (2 * d * PI);
+		}
+		else {
+			r = 0;
+		}
+
+		s = 0.5f + r * dir[0];
+		t = 0.5f - r * dir[1];
+
+		//this->Get(s, t, &R, &G, &B);
+
+		int u = s * width;
+		int v = t * height;
+
+		int offset = (v * width + u) * 3;
+		R = texels[offset];
+		G = texels[offset + 1];
+		B = texels[offset + 2];
 	}
 };
 
