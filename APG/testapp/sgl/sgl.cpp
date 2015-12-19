@@ -13,6 +13,11 @@
 
 #define DIR_OFFSET 0.001f
 
+#define AREA_LIGHTS
+#ifdef AREA_LIGHTS
+#define AREA_SAMPLE_COUNT 10
+#endif
+
 //#define FXAA
 #ifdef FXAA
 /// Trims the algorithm from processing dark areas.
@@ -25,8 +30,8 @@
 
 #define ADVANCED_SHADING
 // debug defines
-#define REFLECTION
-#define REFRACTION
+//#define REFLECTION
+//#define REFRACTION
 
 // Defines uniform depth of field.
 //#define DEPTH_OF_FIELD
@@ -2217,6 +2222,9 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 			mE = static_cast<EmissiveMaterial *>(m);
 
 			addEmissiveColor(*mE, r, g, b, ray.length);
+			r += mE->r;
+			g += mE->g;
+			b += mE->b;
 		}else {
 
 			mP = static_cast<PhongMaterial *>(m);
@@ -2260,27 +2268,96 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 
 
 				d = dot(normal, ra.dir);
-				//d = 1;
 				d = clip(d);
-				//if (d == 0.0f) { continue; }
-				// !traceRay(ra, tmpRAdd, tmpGAdd, tmpBAdd, DEFAULT_REFR_INDEX)
-				if (/*true ||*/ reachLight(ra))
+				if (reachLight(ra))
 				{
-					//printf("hikasdhjaskhfkasjnfa\n");
 					phongSpecular(normal, ray.dir, impact, *mP, *l, tmpR, tmpG, tmpB);
-					//tmpR = mP->r;
-					//tmpG = mP->g;
-					//tmpB = mP->b;
 					tmpR += d * mP->kd * mP->r * l->r;
 					tmpG += d * mP->kd * mP->g * l->g;
 					tmpB += d * mP->kd * mP->b * l->b;
 				}
-				//tmpR += d * tmpRAdd * mP->kd * mP->r;
-				//tmpG += d * tmpGAdd * mP->kd * mP->g;
-				//tmpB += d * tmpBAdd * mP->kd * mP->b;
 
 				
 			}
+#ifdef AREA_LIGHTS
+			Polygon *emi;
+			itE = emissivePolygonStack.begin();
+			float wGlob, wLoc, r1, r2, u, v;
+			float e1[3], e2[3];
+			float n[3];
+
+
+			for (; itE != emissivePolygonStack.end(); itE++)
+			{
+				tmpRAdd = tmpGAdd = tmpBAdd = 0;
+				emi = *itE;
+
+				mE = static_cast<EmissiveMaterial *>(emi->mat);
+
+				inputPoint4f *v0 = emi->points[0];
+				inputPoint4f *v1 = emi->points[1];
+				inputPoint4f *v2 = emi->points[2];
+
+				e1[0] = v1->x - v0->x;
+				e1[1] = v1->y - v0->y;
+				e1[2] = v1->z - v0->z;
+				e2[0] = v2->x - v0->x;
+				e2[1] = v2->y - v0->y;
+				e2[2] = v2->z - v0->z;
+
+				cross(n, e1, e2);
+
+				wGlob = length(n) / (2 * AREA_SAMPLE_COUNT);
+				//printf("%f \n",length(n));
+				//printf("%f %f %f \n", mE->a0, mE->a1, mE->a2);
+				normalize(n);
+
+				for (int i = 0; i < AREA_SAMPLE_COUNT; i++)
+				{
+					wLoc = 1;
+					r1 = ((float)std::rand()) / RAND_MAX;
+					r2 = ((float)std::rand()) / RAND_MAX;
+
+					u = (r1 + r2 > 1.0f) ? 1 - r1 : r1;
+					v = (r1 + r2 > 1.0f) ? 1 - r2 : r2;
+
+					dire[0] = v0->x + u * e1[0] + v * e2[0] - impact[0];
+					dire[1] = v0->y + u * e1[1] + v * e2[1] - impact[1];
+					dire[2] = v0->z + u * e1[2] + v * e2[2] - impact[2];
+					ra.length = length(dire);
+					normalize(dire);
+					ra.dir = dire;
+
+					orig[0] = impact[0] + 0.0001f * normal[0];
+					orig[1] = impact[1] + 0.0001f * normal[1];
+					orig[2] = impact[2] + 0.0001f * normal[2];
+
+					ra.start = orig;
+
+					ra.defR = mE->r;
+					ra.defG = mE->g;
+					ra.defB = mE->b;
+
+					ra.depth = ray.depth;
+					//normalize(ra.dir);
+					if (dot(n, ra.dir) > 0) { continue; }
+					if (reachLight(ra))
+					{
+						//printf("%f \n",ra.length);
+						//phongSpecular(normal, ray.dir, impact, *mP, *l, tmpR, tmpG, tmpB);
+						wLoc = clip(dot(normal, ra.dir) * -dot(n, ra.dir)) / (((mE->a2 * ra.length) + mE->a1) * ra.length + mE->a0);
+						//tmpR += mP->kd * mP->r * wGlob * wLoc;
+						//tmpG += mP->kd * mP->g * wGlob * wLoc;
+						//tmpB += mP->kd * mP->b * wGlob * wLoc;
+						//printf("%f %f %f \n", mE->r, mE->g, mE->b);
+						tmpR += clip(mP->kd * mP->r * wLoc * wGlob * mE->r);
+						tmpG += clip(mP->kd * mP->g * wLoc * wGlob * mE->g);
+						tmpB += clip(mP->kd * mP->b * wLoc * wGlob * mE->b);
+					}
+
+				}
+			}
+#endif
 #ifdef REFLECTION
 			//reflection?
 			//mP->ks = 1;

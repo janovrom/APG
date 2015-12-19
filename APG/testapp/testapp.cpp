@@ -45,10 +45,10 @@
 #endif
 
 #ifdef TEST5
-//#define TEST_5A
+#define TEST_5A
 //#define TEST_5B
 //#define TEST_5C
-#define TEST_5D
+//#define TEST_5D
 #endif
 
 
