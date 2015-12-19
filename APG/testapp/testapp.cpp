@@ -11,7 +11,7 @@
 //#define TEST1
 //#define TEST2
 //#define TEST3
-//#define TEST4
+#define TEST4
 #define TEST5
 
 #ifdef TEST0
@@ -40,14 +40,14 @@
 
 #ifdef TEST4
 //#define TEST_4A
-#define TEST_4B
+//#define TEST_4B
 //#define TEST_4C
 #endif
 
 #ifdef TEST5
-#define TEST_5A
+//#define TEST_5A
 //#define TEST_5B
-//#define TEST_5C
+#define TEST_5C
 //#define TEST_5D
 #endif
 
