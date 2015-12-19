@@ -36,9 +36,9 @@
 // Defines uniform depth of field.
 //#define DEPTH_OF_FIELD
 #ifdef DEPTH_OF_FIELD
-#define FOCAL_POINT_DIST	130.0f
+#define FOCAL_POINT_DIST	9.0f
 // This defines, how far from each other will samples be taken.
-#define BLUR_FACTOR			1
+#define BLUR_FACTOR			16
 // When sampling size set to x, we will have x*x samples.
 #define SAMPLE_SIZE_X		2
 #define BLEND_FACTOR        (SAMPLE_SIZE_X + 1) * (SAMPLE_SIZE_X + 1)
@@ -51,7 +51,7 @@
 // decides which ellipse algoritm should be used
 #define ELLIPSE
 
-#define MAX_RAY_DEPTH 2
+#define MAX_RAY_DEPTH 5
 
 using namespace std;
 
@@ -216,6 +216,7 @@ void sglFinish(void) {
 		delete textureStack.back();
 		textureStack.pop_back();
 	}
+	emissivePolygonStack.clear();
 }
 
 int sglCreateContext(int width, int height) {
@@ -2281,80 +2282,81 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 			}
 #ifdef AREA_LIGHTS
 			Polygon *emi;
-			itE = emissivePolygonStack.begin();
-			float wGlob, wLoc, r1, r2, u, v;
-			float e1[3], e2[3];
-			float n[3];
-
-
-			for (; itE != emissivePolygonStack.end(); itE++)
+			if (emissivePolygonStack.size() > 0)
 			{
-				tmpRAdd = tmpGAdd = tmpBAdd = 0;
-				emi = *itE;
+				itE = emissivePolygonStack.begin();
+				float wGlob, wLoc, r1, r2, u, v;
+				float e1[3], e2[3];
+				float n[3];
 
-				mE = static_cast<EmissiveMaterial *>(emi->mat);
 
-				inputPoint4f *v0 = emi->points[0];
-				inputPoint4f *v1 = emi->points[1];
-				inputPoint4f *v2 = emi->points[2];
-
-				e1[0] = v1->x - v0->x;
-				e1[1] = v1->y - v0->y;
-				e1[2] = v1->z - v0->z;
-				e2[0] = v2->x - v0->x;
-				e2[1] = v2->y - v0->y;
-				e2[2] = v2->z - v0->z;
-
-				cross(n, e1, e2);
-
-				wGlob = length(n) / (2 * AREA_SAMPLE_COUNT);
-				//printf("%f \n",length(n));
-				//printf("%f %f %f \n", mE->a0, mE->a1, mE->a2);
-				normalize(n);
-
-				for (int i = 0; i < AREA_SAMPLE_COUNT; i++)
+				for (; itE != emissivePolygonStack.end(); itE++)
 				{
-					wLoc = 1;
-					r1 = ((float)std::rand()) / RAND_MAX;
-					r2 = ((float)std::rand()) / RAND_MAX;
+					tmpRAdd = tmpGAdd = tmpBAdd = 0;
+					emi = *itE;
+					mE = (EmissiveMaterial *)(emi->mat);
+					inputPoint4f *v0 = emi->points[0];
+					inputPoint4f *v1 = emi->points[1];
+					inputPoint4f *v2 = emi->points[2];
 
-					u = (r1 + r2 > 1.0f) ? 1 - r1 : r1;
-					v = (r1 + r2 > 1.0f) ? 1 - r2 : r2;
+					e1[0] = v1->x - v0->x;
+					e1[1] = v1->y - v0->y;
+					e1[2] = v1->z - v0->z;
+					e2[0] = v2->x - v0->x;
+					e2[1] = v2->y - v0->y;
+					e2[2] = v2->z - v0->z;
 
-					dire[0] = v0->x + u * e1[0] + v * e2[0] - impact[0];
-					dire[1] = v0->y + u * e1[1] + v * e2[1] - impact[1];
-					dire[2] = v0->z + u * e1[2] + v * e2[2] - impact[2];
-					ra.length = length(dire);
-					normalize(dire);
-					ra.dir = dire;
+					cross(n, e1, e2);
 
-					orig[0] = impact[0] + 0.0001f * normal[0];
-					orig[1] = impact[1] + 0.0001f * normal[1];
-					orig[2] = impact[2] + 0.0001f * normal[2];
+					wGlob = length(n) / (2 * AREA_SAMPLE_COUNT);
+					//printf("%f \n",length(n));
+					//printf("%f %f %f \n", mE->a0, mE->a1, mE->a2);
+					normalize(n);
 
-					ra.start = orig;
-
-					ra.defR = mE->r;
-					ra.defG = mE->g;
-					ra.defB = mE->b;
-
-					ra.depth = ray.depth;
-					//normalize(ra.dir);
-					if (dot(n, ra.dir) > 0) { continue; }
-					if (reachLight(ra))
+					for (int i = 0; i < AREA_SAMPLE_COUNT; i++)
 					{
-						//printf("%f \n",ra.length);
-						//phongSpecular(normal, ray.dir, impact, *mP, *l, tmpR, tmpG, tmpB);
-						wLoc = clip(dot(normal, ra.dir) * -dot(n, ra.dir)) / (((mE->a2 * ra.length) + mE->a1) * ra.length + mE->a0);
-						//tmpR += mP->kd * mP->r * wGlob * wLoc;
-						//tmpG += mP->kd * mP->g * wGlob * wLoc;
-						//tmpB += mP->kd * mP->b * wGlob * wLoc;
-						//printf("%f %f %f \n", mE->r, mE->g, mE->b);
-						tmpR += clip(mP->kd * mP->r * wLoc * wGlob * mE->r);
-						tmpG += clip(mP->kd * mP->g * wLoc * wGlob * mE->g);
-						tmpB += clip(mP->kd * mP->b * wLoc * wGlob * mE->b);
-					}
+						wLoc = 1;
+						r1 = ((float)std::rand()) / RAND_MAX;
+						r2 = ((float)std::rand()) / RAND_MAX;
 
+						u = (r1 + r2 > 1.0f) ? 1 - r1 : r1;
+						v = (r1 + r2 > 1.0f) ? 1 - r2 : r2;
+
+						dire[0] = v0->x + u * e1[0] + v * e2[0] - impact[0];
+						dire[1] = v0->y + u * e1[1] + v * e2[1] - impact[1];
+						dire[2] = v0->z + u * e1[2] + v * e2[2] - impact[2];
+						ra.length = length(dire);
+						normalize(dire);
+						ra.dir = dire;
+
+						orig[0] = impact[0] + 0.0001f * normal[0];
+						orig[1] = impact[1] + 0.0001f * normal[1];
+						orig[2] = impact[2] + 0.0001f * normal[2];
+
+						ra.start = orig;
+
+						ra.defR = mE->r;
+						ra.defG = mE->g;
+						ra.defB = mE->b;
+
+						ra.depth = ray.depth;
+						//normalize(ra.dir);
+						if (dot(n, ra.dir) > 0) { continue; }
+						if (reachLight(ra))
+						{
+							//printf("%f \n",ra.length);
+							//phongSpecular(normal, ray.dir, impact, *mP, *l, tmpR, tmpG, tmpB);
+							wLoc = clip(dot(normal, ra.dir) * -dot(n, ra.dir)) / (((mE->a2 * ra.length) + mE->a1) * ra.length + mE->a0);
+							//tmpR += mP->kd * mP->r * wGlob * wLoc;
+							//tmpG += mP->kd * mP->g * wGlob * wLoc;
+							//tmpB += mP->kd * mP->b * wGlob * wLoc;
+							//printf("%f %f %f \n", mE->r, mE->g, mE->b);
+							tmpR += clip(mP->kd * mP->r * wLoc * wGlob * mE->r);
+							tmpG += clip(mP->kd * mP->g * wLoc * wGlob * mE->g);
+							tmpB += clip(mP->kd * mP->b * wLoc * wGlob * mE->b);
+						}
+
+					}
 				}
 			}
 #endif
@@ -3642,7 +3644,7 @@ void sglBeginScene() {
 		delete textureStack.back();
 		textureStack.pop_back();
 	}
-
+	emissivePolygonStack.clear();
 	if (hasBegun || contextWrapper.empty())
 	{
 		setErrCode(SGL_INVALID_OPERATION);
@@ -3774,6 +3776,16 @@ void sglRayTraceScene()
 	float *colorBuffer = cont->getColorBuffer();
 	float *depthBuffer = cont->getDepthBuffer();
 
+	inputPoint4f eye;
+	tmpP.x = 0;
+	tmpP.y = 0;
+	tmpP.z = -1;//(FOCAL_POINT_DIST / (zFar - zNear) - 0.5f) * 2.0f;
+	tmpP.w = 1;
+	multiplyMatrixVector(inverse, &tmpP, eye);
+	eye.x = eye.x / eye.w;
+	eye.y = eye.y / eye.w;
+	eye.z = eye.z / eye.w;
+
 	for (int row = 0; row < winHeight; ++row)
 	{
 		for (int col = 0; col < winWidth; ++col)
@@ -3819,16 +3831,26 @@ void sglRayTraceScene()
 			drawPixel( row * winWidth * 3 + col * 3, row * winWidth + col, 0, r, g, b, colorBuffer, depthBuffer);
 			//delete ray;
 #else
-			// find focal point
+			// find focal point direction to far plane
 			inputPoint4f focalPoint;
 			tmpP.x = (col - (viewportOffsetX + winWidth / 2.0f)) * 2.0f / winWidth;
 			tmpP.y = (row - (viewportOffsetY + winHeight / 2.0f)) * 2.0f / winHeight;
-			tmpP.z = FOCAL_POINT_DIST;//(FOCAL_POINT_DIST / (zFar - zNear) - 0.5f) * 2.0f;
+			tmpP.z = 1;//(FOCAL_POINT_DIST / (zFar - zNear) - 0.5f) * 2.0f;
 			tmpP.w = 1;
 			multiplyMatrixVector(inverse, &tmpP, focalPoint);
-			focalPoint.x = focalPoint.x / focalPoint.w;
-			focalPoint.y = focalPoint.y / focalPoint.w;
-			focalPoint.z = FOCAL_POINT_DIST;
+			focalPoint.x = focalPoint.x / focalPoint.w - eye.x;
+			focalPoint.y = focalPoint.y / focalPoint.w - eye.y;
+			focalPoint.z = focalPoint.z / focalPoint.w - eye.z;
+			// get direction
+			float length = sqrtf(focalPoint.x * focalPoint.x + focalPoint.y * focalPoint.y + focalPoint.z * focalPoint.z);
+			length = 1.0f / length;
+			// normalize and make it length of FOCAL_POINT_DIST
+			focalPoint.x *= length;
+			focalPoint.y *= length;
+			focalPoint.z *= length;
+			focalPoint.x = focalPoint.x * FOCAL_POINT_DIST + eye.x;
+			focalPoint.y = focalPoint.y * FOCAL_POINT_DIST + eye.y;
+			focalPoint.z = focalPoint.z * FOCAL_POINT_DIST + eye.z;
 
 			r = g = b = 0;
 			// for each texel take corner texe;s, which we will project to focal point
@@ -3989,7 +4011,7 @@ void sglEnvironmentMap(const int width,
 					   const int height,
 					   float *texels)
 {
-	Texture *map = new Texture(Texture::SGL_NEAREST, width, height, texels, Texture::SGL_CLAMP);
+	Texture *map = new Texture(Texture::SGL_LINEAR, width, height, texels, Texture::SGL_CLAMP);
 	contextWrapper[contextWrapper.activeContext]->SetEnvironmentMap(map);
 }
 
