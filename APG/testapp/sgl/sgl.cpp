@@ -31,9 +31,9 @@
 // Defines uniform depth of field.
 #define DEPTH_OF_FIELD
 #ifdef DEPTH_OF_FIELD
-#define FOCAL_POINT_DIST	130.0f
+#define FOCAL_POINT_DIST	9.0f
 // This defines, how far from each other will samples be taken.
-#define BLUR_FACTOR			1
+#define BLUR_FACTOR			16
 // When sampling size set to x, we will have x*x samples.
 #define SAMPLE_SIZE_X		2
 #define BLEND_FACTOR        (SAMPLE_SIZE_X + 1) * (SAMPLE_SIZE_X + 1)
@@ -3690,6 +3690,16 @@ void sglRayTraceScene()
 	float *colorBuffer = cont->getColorBuffer();
 	float *depthBuffer = cont->getDepthBuffer();
 
+	inputPoint4f eye;
+	tmpP.x = 0;
+	tmpP.y = 0;
+	tmpP.z = -1;//(FOCAL_POINT_DIST / (zFar - zNear) - 0.5f) * 2.0f;
+	tmpP.w = 1;
+	multiplyMatrixVector(inverse, &tmpP, eye);
+	eye.x = eye.x / eye.w;
+	eye.y = eye.y / eye.w;
+	eye.z = eye.z / eye.w;
+
 	for (int row = 0; row < winHeight; ++row)
 	{
 		for (int col = 0; col < winWidth; ++col)
@@ -3735,16 +3745,26 @@ void sglRayTraceScene()
 			drawPixel( row * winWidth * 3 + col * 3, row * winWidth + col, 0, r, g, b, colorBuffer, depthBuffer);
 			//delete ray;
 #else
-			// find focal point
+			// find focal point direction to far plane
 			inputPoint4f focalPoint;
 			tmpP.x = (col - (viewportOffsetX + winWidth / 2.0f)) * 2.0f / winWidth;
 			tmpP.y = (row - (viewportOffsetY + winHeight / 2.0f)) * 2.0f / winHeight;
-			tmpP.z = FOCAL_POINT_DIST;//(FOCAL_POINT_DIST / (zFar - zNear) - 0.5f) * 2.0f;
+			tmpP.z = 1;//(FOCAL_POINT_DIST / (zFar - zNear) - 0.5f) * 2.0f;
 			tmpP.w = 1;
 			multiplyMatrixVector(inverse, &tmpP, focalPoint);
-			focalPoint.x = focalPoint.x / focalPoint.w;
-			focalPoint.y = focalPoint.y / focalPoint.w;
-			focalPoint.z = FOCAL_POINT_DIST;
+			focalPoint.x = focalPoint.x / focalPoint.w - eye.x;
+			focalPoint.y = focalPoint.y / focalPoint.w - eye.y;
+			focalPoint.z = focalPoint.z / focalPoint.w - eye.z;
+			// get direction
+			float length = sqrtf(focalPoint.x * focalPoint.x + focalPoint.y * focalPoint.y + focalPoint.z * focalPoint.z);
+			length = 1.0f / length;
+			// normalize and make it length of FOCAL_POINT_DIST
+			focalPoint.x *= length;
+			focalPoint.y *= length;
+			focalPoint.z *= length;
+			focalPoint.x = focalPoint.x * FOCAL_POINT_DIST + eye.x;
+			focalPoint.y = focalPoint.y * FOCAL_POINT_DIST + eye.y;
+			focalPoint.z = focalPoint.z * FOCAL_POINT_DIST + eye.z;
 
 			r = g = b = 0;
 			// for each texel take corner texe;s, which we will project to focal point
