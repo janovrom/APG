@@ -142,6 +142,8 @@ public:
 		R = texels[offset];
 		G = texels[offset + 1];
 		B = texels[offset + 2];
+
+		Get(s, t, &R, &G, &B);
 	}
 };
 
