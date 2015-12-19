@@ -2281,80 +2281,83 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 			}
 #ifdef AREA_LIGHTS
 			Polygon *emi;
-			itE = emissivePolygonStack.begin();
-			float wGlob, wLoc, r1, r2, u, v;
-			float e1[3], e2[3];
-			float n[3];
-
-
-			for (; itE != emissivePolygonStack.end(); itE++)
+			if (emissivePolygonStack.size() > 0)
 			{
-				tmpRAdd = tmpGAdd = tmpBAdd = 0;
-				emi = *itE;
+				itE = emissivePolygonStack.begin();
+				float wGlob, wLoc, r1, r2, u, v;
+				float e1[3], e2[3];
+				float n[3];
 
-				mE = static_cast<EmissiveMaterial *>(emi->mat);
 
-				inputPoint4f *v0 = emi->points[0];
-				inputPoint4f *v1 = emi->points[1];
-				inputPoint4f *v2 = emi->points[2];
-
-				e1[0] = v1->x - v0->x;
-				e1[1] = v1->y - v0->y;
-				e1[2] = v1->z - v0->z;
-				e2[0] = v2->x - v0->x;
-				e2[1] = v2->y - v0->y;
-				e2[2] = v2->z - v0->z;
-
-				cross(n, e1, e2);
-
-				wGlob = length(n) / (2 * AREA_SAMPLE_COUNT);
-				//printf("%f \n",length(n));
-				//printf("%f %f %f \n", mE->a0, mE->a1, mE->a2);
-				normalize(n);
-
-				for (int i = 0; i < AREA_SAMPLE_COUNT; i++)
+				for (; itE != emissivePolygonStack.end(); itE++)
 				{
-					wLoc = 1;
-					r1 = ((float)std::rand()) / RAND_MAX;
-					r2 = ((float)std::rand()) / RAND_MAX;
+					tmpRAdd = tmpGAdd = tmpBAdd = 0;
+					emi = *itE;
 
-					u = (r1 + r2 > 1.0f) ? 1 - r1 : r1;
-					v = (r1 + r2 > 1.0f) ? 1 - r2 : r2;
+					mE = (EmissiveMaterial *)(emi->mat);
 
-					dire[0] = v0->x + u * e1[0] + v * e2[0] - impact[0];
-					dire[1] = v0->y + u * e1[1] + v * e2[1] - impact[1];
-					dire[2] = v0->z + u * e1[2] + v * e2[2] - impact[2];
-					ra.length = length(dire);
-					normalize(dire);
-					ra.dir = dire;
+					inputPoint4f *v0 = emi->points[0];
+					inputPoint4f *v1 = emi->points[1];
+					inputPoint4f *v2 = emi->points[2];
 
-					orig[0] = impact[0] + 0.0001f * normal[0];
-					orig[1] = impact[1] + 0.0001f * normal[1];
-					orig[2] = impact[2] + 0.0001f * normal[2];
+					e1[0] = v1->x - v0->x;
+					e1[1] = v1->y - v0->y;
+					e1[2] = v1->z - v0->z;
+					e2[0] = v2->x - v0->x;
+					e2[1] = v2->y - v0->y;
+					e2[2] = v2->z - v0->z;
 
-					ra.start = orig;
+					cross(n, e1, e2);
 
-					ra.defR = mE->r;
-					ra.defG = mE->g;
-					ra.defB = mE->b;
+					wGlob = length(n) / (2 * AREA_SAMPLE_COUNT);
+					//printf("%f \n",length(n));
+					//printf("%f %f %f \n", mE->a0, mE->a1, mE->a2);
+					normalize(n);
 
-					ra.depth = ray.depth;
-					//normalize(ra.dir);
-					if (dot(n, ra.dir) > 0) { continue; }
-					if (reachLight(ra))
+					for (int i = 0; i < AREA_SAMPLE_COUNT; i++)
 					{
-						//printf("%f \n",ra.length);
-						//phongSpecular(normal, ray.dir, impact, *mP, *l, tmpR, tmpG, tmpB);
-						wLoc = clip(dot(normal, ra.dir) * -dot(n, ra.dir)) / (((mE->a2 * ra.length) + mE->a1) * ra.length + mE->a0);
-						//tmpR += mP->kd * mP->r * wGlob * wLoc;
-						//tmpG += mP->kd * mP->g * wGlob * wLoc;
-						//tmpB += mP->kd * mP->b * wGlob * wLoc;
-						//printf("%f %f %f \n", mE->r, mE->g, mE->b);
-						tmpR += clip(mP->kd * mP->r * wLoc * wGlob * mE->r);
-						tmpG += clip(mP->kd * mP->g * wLoc * wGlob * mE->g);
-						tmpB += clip(mP->kd * mP->b * wLoc * wGlob * mE->b);
-					}
+						wLoc = 1;
+						r1 = ((float)std::rand()) / RAND_MAX;
+						r2 = ((float)std::rand()) / RAND_MAX;
 
+						u = (r1 + r2 > 1.0f) ? 1 - r1 : r1;
+						v = (r1 + r2 > 1.0f) ? 1 - r2 : r2;
+
+						dire[0] = v0->x + u * e1[0] + v * e2[0] - impact[0];
+						dire[1] = v0->y + u * e1[1] + v * e2[1] - impact[1];
+						dire[2] = v0->z + u * e1[2] + v * e2[2] - impact[2];
+						ra.length = length(dire);
+						normalize(dire);
+						ra.dir = dire;
+
+						orig[0] = impact[0] + 0.0001f * normal[0];
+						orig[1] = impact[1] + 0.0001f * normal[1];
+						orig[2] = impact[2] + 0.0001f * normal[2];
+
+						ra.start = orig;
+
+						ra.defR = mE->r;
+						ra.defG = mE->g;
+						ra.defB = mE->b;
+
+						ra.depth = ray.depth;
+						//normalize(ra.dir);
+						if (dot(n, ra.dir) > 0) { continue; }
+						if (reachLight(ra))
+						{
+							//printf("%f \n",ra.length);
+							//phongSpecular(normal, ray.dir, impact, *mP, *l, tmpR, tmpG, tmpB);
+							wLoc = clip(dot(normal, ra.dir) * -dot(n, ra.dir)) / (((mE->a2 * ra.length) + mE->a1) * ra.length + mE->a0);
+							//tmpR += mP->kd * mP->r * wGlob * wLoc;
+							//tmpG += mP->kd * mP->g * wGlob * wLoc;
+							//tmpB += mP->kd * mP->b * wGlob * wLoc;
+							//printf("%f %f %f \n", mE->r, mE->g, mE->b);
+							tmpR += clip(mP->kd * mP->r * wLoc * wGlob * mE->r);
+							tmpG += clip(mP->kd * mP->g * wLoc * wGlob * mE->g);
+							tmpB += clip(mP->kd * mP->b * wLoc * wGlob * mE->b);
+						}
+
+					}
 				}
 			}
 #endif
@@ -4009,7 +4012,7 @@ void sglEnvironmentMap(const int width,
 					   const int height,
 					   float *texels)
 {
-	Texture *map = new Texture(Texture::SGL_NEAREST, width, height, texels, Texture::SGL_CLAMP);
+	Texture *map = new Texture(Texture::SGL_LINEAR, width, height, texels, Texture::SGL_CLAMP);
 	contextWrapper[contextWrapper.activeContext]->SetEnvironmentMap(map);
 }
 

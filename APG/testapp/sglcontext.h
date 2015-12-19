@@ -95,18 +95,18 @@ public:
 				float v_ratio = v - y;
 				float u_opposite = 1 - u_ratio;
 				float v_opposite = 1 - v_ratio;
-				*r = (texels[x *width * 3 + y * 3] * u_opposite + texels[(x + 1) *width * 3 + (y)* 3] * u_ratio) * v_opposite +
-					(texels[x *width * 3 + (y + 1) * 3] * u_opposite + texels[(x + 1) *width * 3 + (y + 1) *width * 3] * u_ratio) * v_ratio;
-				*g = (texels[x *width * 3 + y * 3 + 1] * u_opposite + texels[(x + 1) *width * 3 + (y)* 3 + 1] * u_ratio) * v_opposite +
-					(texels[x *width * 3 + (y + 1) * 3 + 1] * u_opposite + texels[(x + 1) *width * 3 + (y + 1) *width * 3 + 1] * u_ratio) * v_ratio;
-				*b = (texels[x *width * 3 + y * 3 + 2] * u_opposite + texels[(x + 1) *width * 3 + (y)* 3 + 2] * u_ratio) * v_opposite +
-					(texels[x *width * 3 + (y + 1) * 3 + 2] * u_opposite + texels[(x + 1) *width * 3 + (y + 1) *width * 3 + 2] * u_ratio) * v_ratio;
+				*r = (texels[y * width * 3 + x * 3] * v_opposite + texels[(y + 1) * width * 3 + x * 3] * v_ratio) * u_opposite +
+					 (texels[y * width * 3 + (x + 1) * 3] * v_opposite + texels[(y + 1) *width * 3 + (x + 1) * 3] * v_ratio) * u_ratio;
+				*g = (texels[y * width * 3 +  x * 3 + 1] * v_opposite + texels[(y + 1) * width * 3 + x * 3 + 1] * v_ratio) * u_opposite +
+					 (texels[y * width * 3 + (x + 1) * 3 + 1] * v_opposite + texels[(y + 1) * width * 3 + (x + 1) * 3 + 1] * v_ratio) * u_ratio;
+				*b = (texels[y * width * 3 +  x * 3 + 2] * v_opposite + texels[(y + 1) * width * 3 + x * 3 + 2] * v_ratio) * u_opposite +
+					 (texels[y * width * 3 + (x + 1) * 3 + 2] * v_opposite + texels[(y + 1) * width * 3 + (x + 1) * 3 + 2] * v_ratio) * u_ratio;
 			} break;
 			case SGL_NEAREST:
 			default:
 			{
-				int thisRow = (int)roundf(v)  * width * 3;
-				int thisCol = (int)roundf(u);
+				int thisRow = (int)roundf(v) * width * 3;
+				int thisCol = (int)roundf(u) * 3;
 				*r = texels[thisRow + thisCol];
 				*g = texels[thisRow + thisCol + 1];
 				*b = texels[thisRow + thisCol + 2];
@@ -133,15 +133,15 @@ public:
 		s = 0.5f + r * dir[0];
 		t = 0.5f - r * dir[1];
 
-		//this->Get(s, t, &R, &G, &B);
+		this->Get(s, t, &R, &G, &B);
 
-		int u = (int)(s * (float)(width-1));
+		/*int u = (int)(s * (float)(width-1));
 		int v = (int)(t * (float)(height-1));
 
 		int offset = (v * width + u) * 3;
 		R = texels[offset];
 		G = texels[offset + 1];
-		B = texels[offset + 2];
+		B = texels[offset + 2];*/
 	}
 };
 
@@ -231,12 +231,18 @@ protected:
 	Primitive() 
 	{
 	}
+	Primitive(PrimitiveType type) : type(type)
+	{
+	}
 };
 
 struct Polygon : public Primitive
 {
 	std::deque<inputPoint4f*> points;
+	Polygon() : Primitive(PrimitiveType::POLYGON)
+	{
 
+	}
 	~Polygon()
 	{
 		while (!points.empty())
@@ -250,6 +256,10 @@ struct Polygon : public Primitive
 struct Sphere : public Primitive
 {
 	float x, y, z, radius;
+	Sphere() : Primitive(PrimitiveType::SPHERE)
+	{
+
+	}
 };
 
 /**
