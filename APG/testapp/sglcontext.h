@@ -135,8 +135,8 @@ public:
 
 		//this->Get(s, t, &R, &G, &B);
 
-		int u = s * width;
-		int v = t * height;
+		int u = (int)(s * (float)(width-1));
+		int v = (int)(t * (float)(height-1));
 
 		int offset = (v * width + u) * 3;
 		R = texels[offset];
