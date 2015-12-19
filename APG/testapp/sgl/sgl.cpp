@@ -30,8 +30,8 @@
 
 #define ADVANCED_SHADING
 // debug defines
-//#define REFLECTION
-//#define REFRACTION
+#define REFLECTION
+#define REFRACTION
 
 // Defines uniform depth of field.
 //#define DEPTH_OF_FIELD
@@ -51,7 +51,7 @@
 // decides which ellipse algoritm should be used
 #define ELLIPSE
 
-#define MAX_RAY_DEPTH 3
+#define MAX_RAY_DEPTH 2
 
 using namespace std;
 
@@ -2361,8 +2361,8 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 #ifdef REFLECTION
 			//reflection?
 			//mP->ks = 1;
-			//if (mP->ks > 0.0f)
-			//{
+			if (mP->ks > 0.0f)
+			{
 				tmpRAdd = tmpGAdd = tmpBAdd = 0;
 				//reflection
 				dire[0] = dire[1] = dire[2] = 0.0f;
@@ -2385,7 +2385,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				tmpG += clip(tmpGAdd * mP->ks );
 				tmpB += clip(tmpBAdd * mP->ks );
 				
-			//}
+			}
 #endif
 #ifdef REFRACTION
 			// add refraction
