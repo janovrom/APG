@@ -51,7 +51,7 @@
 // decides which ellipse algoritm should be used
 #define ELLIPSE
 
-#define MAX_RAY_DEPTH 2
+#define MAX_RAY_DEPTH 5
 
 using namespace std;
 
@@ -216,6 +216,7 @@ void sglFinish(void) {
 		delete textureStack.back();
 		textureStack.pop_back();
 	}
+	emissivePolygonStack.clear();
 }
 
 int sglCreateContext(int width, int height) {
@@ -2293,9 +2294,7 @@ bool traceRay(Ray& ray, float& r, float& g, float &b, float refractIndex)
 				{
 					tmpRAdd = tmpGAdd = tmpBAdd = 0;
 					emi = *itE;
-
 					mE = (EmissiveMaterial *)(emi->mat);
-
 					inputPoint4f *v0 = emi->points[0];
 					inputPoint4f *v1 = emi->points[1];
 					inputPoint4f *v2 = emi->points[2];
@@ -3645,7 +3644,7 @@ void sglBeginScene() {
 		delete textureStack.back();
 		textureStack.pop_back();
 	}
-
+	emissivePolygonStack.clear();
 	if (hasBegun || contextWrapper.empty())
 	{
 		setErrCode(SGL_INVALID_OPERATION);

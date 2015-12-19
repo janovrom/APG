@@ -9,7 +9,6 @@
 #define MIN_CONTEXTS 32
 #define PI 3.141592f
 
-
 std::stack<float *> modelViewStack;
 std::stack<float *> projectionStack;
 
@@ -231,12 +230,18 @@ protected:
 	Primitive() 
 	{
 	}
+	Primitive(PrimitiveType type) : type(type)
+	{
+	}
 };
 
 struct Polygon : public Primitive
 {
 	std::deque<inputPoint4f*> points;
+	Polygon() : Primitive(PrimitiveType::POLYGON)
+	{
 
+	}
 	~Polygon()
 	{
 		while (!points.empty())
@@ -250,6 +255,10 @@ struct Polygon : public Primitive
 struct Sphere : public Primitive
 {
 	float x, y, z, radius;
+	Sphere() : Primitive(PrimitiveType::SPHERE)
+	{
+
+	}
 };
 
 /**

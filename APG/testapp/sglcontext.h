@@ -9,7 +9,6 @@
 #define MIN_CONTEXTS 32
 #define PI 3.141592f
 
-
 std::stack<float *> modelViewStack;
 std::stack<float *> projectionStack;
 
